@@ -139,12 +139,13 @@ in Sound Preferences. Use 'default' for the default notification sound.
 
 Alerter outputs a json struct to describe what happened to the alert.
 With this option, Alerter will only output a string value to describe the event.
-> @CLOSED - When the user clicks on the close button (If you changed its label with -closeLabel, your value will be outputed instead of @CLOSED)
-> @CONTENTCLICKED - When the user clicks on the notification content
-> @TIMEOUT - Alert closed after a delay (see -timeout)
-> @ACTIONCLICKED - When the user clicks on the default action (Show).
-VALUE - the text typed by the user in the alert reply input text
-VALUE - When user click on a customized action (see --actions)
+
+* @CLOSED - When the user clicks on the close button (If you changed its label with -closeLabel, your value will be outputed instead of @CLOSED)
+* @CONTENTCLICKED - When the user clicks on the notification content
+* @TIMEOUT - Alert closed after a delay (see -timeout)
+* @ACTIONCLICKED - When the user clicks on the default action (Show).
+* VALUE - the text typed by the user in the alert reply input text
+* VALUE - When user click on a customized action (see --actions)
 
 
 -------------------------------------------------------------------------------
