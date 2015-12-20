@@ -116,7 +116,7 @@ isMavericks()
            "                          The notification actions avalaible.\n" \
            "                          When you provide more than one value, a dropdown will be displayed.\n" \
            "                          You can customize this dropdown label with the next option.\n" \
-           "       -dropdownLabel     The notification actions dropdown title (only when multiples actions are provided.\n" \
+           "       -dropdownLabel VALUE    The notification actions dropdown title (only when multiples actions are provided.\n" \
            "\n" \
            "   Optional:\n" \
            "\n" \
