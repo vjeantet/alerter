@@ -1,0 +1,19 @@
+//
+//  Prefix.pch
+//  alerter
+//
+//  Created by Valere JEANTET on 18/12/2015.
+//  Copyright © 2015 JEANTET Valere. All rights reserved.
+//
+
+#ifndef Prefix_pch
+#define Prefix_pch
+
+// Include any system framework and library headers here that should be included in all compilation units.
+// You will also need to set the Prefix Header build setting of one or more of your targets to reference this file.
+
+#endif /* Prefix_pch */
+
+#ifdef __OBJC__
+#import <Cocoa/Cocoa.h>
+#endif
