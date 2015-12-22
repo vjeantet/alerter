@@ -2,7 +2,7 @@
 
 alerter is a command-line tool to send Mac OS X User Alerts (Notifications),
 which are available in Mac OS X 10.8 and higher.
-the program ends when the alerter is activated or closed, wrinting a json struct to output (stdout) to describe the alert event.
+the program ends when the alerter is activated or closed, writing a the activated value to output (stdout), or a json object to describe the alert event.
 
 Alerts are osx notifications that stay on screen unless dismissed.
 
@@ -21,7 +21,7 @@ Open a notification in the top-right corner of your screen and display one or mo
 * change the close button label.
 * change the actions dropdown label.
 * play a sound while delivering the alert notification.
-* json output on alert's event (closed, timeout, replied, activated...) 
+* value or json output on alert's event (closed, timeout, replied, activated...) 
 * close the alert notification on SIGINT, SIGTERM.
 
 ## Download
@@ -135,18 +135,9 @@ in Sound Preferences. Use 'default' for the default notification sound.
 
 -------------------------------------------------------------------------------
 
-`-outputEvent`
+`-json`
 
-Alerter outputs a json struct to describe what happened to the alert.
-With this option, Alerter will only output a string value to describe the event.
-
-* @CLOSED - When the user clicks on the close button (If you changed its label with -closeLabel, your value will be outputed instead of @CLOSED)
-* @CONTENTCLICKED - When the user clicks on the notification content
-* @TIMEOUT - Alert closed after a delay (see -timeout)
-* @ACTIONCLICKED - When the user clicks on the default action (Show).
-* VALUE - the text typed by the user in the alert reply input text
-* VALUE - When user click on a customized action (see --actions)
-
+Alerter will output a json struct to describe what happened to the alert.
 
 -------------------------------------------------------------------------------
 
