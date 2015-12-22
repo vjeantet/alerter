@@ -108,7 +108,7 @@ isMavericks()
            "\n" \
            "   Reply type notification:\n" \
            "\n" \
-           "       -reply             The notification will be displayed as a reply type alert.\n" \
+           "       -reply VALUE       The notification will be displayed as a reply type alert, VALUE used as placeholder.\n" \
            "\n" \
            "   Actions type notification:\n" \
            "\n" \
@@ -130,7 +130,7 @@ isMavericks()
            "       -sender ID         The bundle identifier of the application that should be shown as the sender, including its icon.\n" \
            "       -appIcon URL       The URL of a image to display instead of the application icon (Mavericks+ only)\n" \
            "       -contentImage URL  The URL of a image to display attached to the notification (Mavericks+ only)\n" \
-           "       -outputEvent       Write only event or value to stdout \n" \
+           "       -json       Write only event or value to stdout \n" \
            "       -timeout NUMBER    Close the notification after NUMBER seconds.\n" \
            "\n" \
            "When the user activates or close a notification, the results are logged to stdout as a json struct.\n" \
@@ -203,12 +203,13 @@ isMavericks()
         
         if (defaults[@"actions"])options[@"actions"]   = defaults[@"actions"];
         if([[[NSProcessInfo processInfo] arguments] containsObject:@"-reply"] == true) {
-            options[@"reply"] = @"" ;
+            options[@"reply"] = @"Reply" ;
+            if (defaults[@"reply"])  options[@"reply"]   = defaults[@"reply"];
         }
         
-        options[@"output"] = @"json" ;
-        if([[[NSProcessInfo processInfo] arguments] containsObject:@"-outputEvent"] == true) {
-            options[@"output"] = @"outputEvent" ;
+        options[@"output"] = @"outputEvent" ;
+        if([[[NSProcessInfo processInfo] arguments] containsObject:@"-json"] == true) {
+            options[@"output"] = @"json" ;
         }
         
         
@@ -293,7 +294,7 @@ isMavericks()
     }else if (options[@"reply"]) {
         [userNotification setValue:@YES forKey:@"_showsButtons"];
         userNotification.hasReplyButton = 1;
-        userNotification.responsePlaceholder = @"Reply";
+        userNotification.responsePlaceholder = options[@"reply"];
     }
     
     // Close button
@@ -370,7 +371,7 @@ isMavericks()
                            if (notificationStillPresent) [NSThread sleepForTimeInterval:0.20f];
                        } while (notificationStillPresent);
                            dispatch_async(dispatch_get_main_queue(), ^{
-                               NSDictionary *udict = @{@"activationType" : @"Closed", @"activationValue" : userNotification.otherButtonTitle};
+                               NSDictionary *udict = @{@"activationType" : @"closed", @"activationValue" : userNotification.otherButtonTitle};
                                [self Quit:udict notification:userNotification] ;
                                exit(0);
                            });
@@ -479,7 +480,7 @@ isMavericks()
 - (BOOL)Quit:(NSDictionary *)udict notification:(NSUserNotification *)notification;
 {
     if ([notification.userInfo[@"output"] isEqualToString:@"outputEvent"]) {
-        if ([udict[@"activationType"] isEqualToString:@"Closed"]) {
+        if ([udict[@"activationType"] isEqualToString:@"closed"]) {
             if ([udict[@"activationValue"] isEqualToString:@""]) {
                 printf("%s", "@CLOSED" );
             }else{
