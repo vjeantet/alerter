@@ -205,6 +205,20 @@ Specifies The PATH or URL of an image to display attached inside the notificatio
 -------------------------------------------------------------------------------
 
 
+## Exemple usage with shell script
+```bash
+ANSWER="$(./alerter -message 'Start now ?' -closeLabel No -actions YES,MAYBE,'one more action' -timeout 10)"
+case $ANSWER in
+    "@TIMEOUT") echo "Timeout man, sorry" ;;
+    "@CLOSED") echo "You clicked on the default alert' close button" ;;
+    "@CONTENTCLICKED") echo "You clicked the alert's content !" ;;
+    "@ACTIONCLICKED") echo "You clicked the alert default action button" ;;
+    "MAYBE") echo "Action MAYBE" ;;
+    "NO") echo "Action NO" ;;
+    "YES") echo "Action YES" ;;
+    **) echo "? --> $ANSWER" ;;
+esac
+```
 
 ## Source code
 
