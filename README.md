@@ -205,7 +205,7 @@ Specifies The PATH or URL of an image to display attached inside the notificatio
 -------------------------------------------------------------------------------
 
 
-## Exemple usage with shell script
+## Example usage with shell script
 ```bash
 ANSWER="$(./alerter -message 'Start now ?' -closeLabel No -actions YES,MAYBE,'one more action' -timeout 10)"
 case $ANSWER in
