@@ -4,12 +4,12 @@ alerter is a command-line tool to send Mac OS X User Alerts (Notifications),
 which are available in Mac OS X 10.8 and higher.
 the program ends when the alerter is activated or closed, writing a the activated value to output (stdout), or a json object to describe the alert event.
 
-Alerts are osx notifications that stay on screen unless dismissed.
+Alerts are OS X notifications that stay on screen unless dismissed.
 
 2 kinds of alert notification can be triggered : "Reply Alert" or "Actions Alert"
 
 ## Reply alert
-Open a notification in the top-right corner of your screen and display a "Reply" button, which opens a text input. 
+Open a notification in the top-right corner of your screen and display a "Reply" button, which opens a text input.
 
 ## Actions alert
 Open a notification in the top-right corner of your screen and display one or more actions to click on.
@@ -21,7 +21,7 @@ Open a notification in the top-right corner of your screen and display one or mo
 * change the close button label.
 * change the actions dropdown label.
 * play a sound while delivering the alert notification.
-* value or json output on alert's event (closed, timeout, replied, activated...) 
+* value or json output on alert's event (closed, timeout, replied, activated...)
 * close the alert notification on SIGINT, SIGTERM.
 
 ## Download
@@ -43,28 +43,28 @@ Display piped data with a sound
 $ echo 'Piped Message Data!' | alerter -sound default
 ```
 
-![Alt text](/img1.png?raw=true "")
+![Display piped data with a sound](/img1.png?raw=true "")
 
 Multiple actions and custom dropdown list
 ```
 ./alerter -message "Deploy now on UAT ?" -actions Now,"Later today","Tomorrow" -dropdownLabel "When ?"
 ```
 
-![Alt text](/img2.png?raw=true "")
+![Multiple actions and custom dropdown list](/img2.png?raw=true "")
 
 Yes or No ?
 ```
 ./alerter -title ProjectX -subtitle "new tag detected" -message "Deploy now on UAT ?" -closeLabel No -actions Yes -appIcon http://vjeantet.fr/images/logo.png
 ```
 
-![Alt text](/img3.png?raw=true "")
+![Yes or No](/img3.png?raw=true "")
 
 What is the name of this release ?
 ```
 ./alerter -reply -message "What is the name of this release ?" -title "Deploy in progress..."
 ```
 
-![Alt text](/img4.png?raw=true "")
+![What is the name of this release](/img4.png?raw=true "")
 
 ## Options
 
@@ -90,17 +90,17 @@ The notification will be displayed as a reply type alert.
 
 `-actions VALUE1,VALUE2,"VALUE 3"`
 
-The notification actions avalaible.
+The notification actions available.
 When you provide more than one value, a dropdown will be displayed.
-You can customize this dropdown label with the next option
-Does not work when -reply is used
+You can customize this dropdown label with the next option.
+Does not work when -reply is used.
 
 -------------------------------------------------------------------------------
 
 `-dropdownLabel VALUE`
 
 The notification actions dropdown title (only when multiples -actions values are provided).
-Does not work when -reply is used
+Does not work when -reply is used.
 
 -------------------------------------------------------------------------------
 
@@ -146,7 +146,7 @@ Alerter will output a json struct to describe what happened to the alert.
 Specifies the ‘group’ a notification belongs to. For any ‘group’ only _one_
 notification will ever be shown, replacing previously posted notifications.
 
-A notification can be explicitely removed with the `-remove` option, describe
+A notification can be explicitly removed with the `-remove` option, described
 below.
 
 Examples are:
