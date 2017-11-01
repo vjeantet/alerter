@@ -1,11 +1,3 @@
-
-# Since v1.8 `terminal-notifier` supports all parts of this fork.
-## please have a look here : https://github.com/julienXX/terminal-notifier/releases
-
-## no more commits on this repo.
-
-----
-
 # Alerter
 
 alerter is a command-line tool to send Mac OS X User Alerts (Notifications),
