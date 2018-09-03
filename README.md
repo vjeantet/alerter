@@ -24,10 +24,14 @@ Open a notification in the top-right corner of your screen and display one or mo
 * value or json output on alert's event (closed, timeout, replied, activated...)
 * close the alert notification on SIGINT, SIGTERM.
 
-## Download
+## Installation
 
-Prebuilt binaries are available from the
+1. Download the zipped precompiled binary from the
 [releases section](https://github.com/vjeantet/alerter/releases).
+2. Extract the binary.
+3. Use as described below.
+
+**NOTE**: If you don't want to have to specify the absolute/relative path to the binary, you can place the binary in any folder that is in your `$PATH` so that your system can automatically find it. If you would like to see which directories are currently in your `$PATH`, you can run `echo $PATH`.
 
 ## Usage
 
