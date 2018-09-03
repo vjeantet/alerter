@@ -14,7 +14,7 @@ Open a notification in the top-right corner of your screen and display a "Reply"
 ## Actions alert
 Open a notification in the top-right corner of your screen and display one or more actions to click on.
 
-# Features
+## Features
 * set alert's icon, title, subtitle, image.
 * capture text typed by user in the reply type alert.
 * timeout : automatically close the alert notification after a delay.
