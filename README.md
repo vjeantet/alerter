@@ -14,7 +14,7 @@ Open a notification in the top-right corner of your screen and display a "Reply"
 ## Actions alert
 Open a notification in the top-right corner of your screen and display one or more actions to click on.
 
-# Features
+## Features
 * set alert's icon, title, subtitle, image.
 * capture text typed by user in the reply type alert.
 * timeout : automatically close the alert notification after a delay.
@@ -24,10 +24,24 @@ Open a notification in the top-right corner of your screen and display one or mo
 * value or json output on alert's event (closed, timeout, replied, activated...)
 * close the alert notification on SIGINT, SIGTERM.
 
-## Download
+## Installation
 
-Prebuilt binaries are available from the
+1. Download the zipped precompiled binary from the
 [releases section](https://github.com/vjeantet/alerter/releases).
+2. Extract the binary.
+3. Use as described below.
+
+### Adding to `$PATH`
+
+If you don't want to have to specify the absolute/relative path to the binary, you can place the binary in any directory that is listed in your `$PATH` so that your system can automatically find it.
+
+If you would like to see which directories are currently in your `$PATH`, you can run `echo $PATH`.
+
+You can use the `cp` command to copy the binary to your chosen directory. For example:
+
+```shell
+cp ~/Downloads/alerter /path/to/directory/you/choose/
+```
 
 ## Usage
 
