@@ -3,11 +3,11 @@
 <plist version="1.0">
 <dict>
 	<key>CFBundleExecutable</key>
-	<string>${EXECUTABLE_NAME}</string>
+	<string>alerter</string>
 	<key>CFBundleIconFile</key>
 	<string>Terminal</string>
 	<key>CFBundleIdentifier</key>
-	<string>fr.vjeantet.${PRODUCT_NAME:rfc1034identifier}</string>
+	<string>fr.vjeantet.alerter</string>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
@@ -15,7 +15,7 @@
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
-	<string>$(MARKETING_VERSION)</string>
+	<string>1.1.0</string>
 	<key>CFBundleSignature</key>
 	<string>????</string>
 	<key>CFBundleVersion</key>
