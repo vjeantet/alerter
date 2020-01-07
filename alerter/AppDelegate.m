@@ -1,7 +1,7 @@
 #import "AppDelegate.h"
 #import <objc/runtime.h>
 
-NSString * const TerminalAlerterBundleID = @"fr.sodadi.alerter";
+NSString * const TerminalAlerterBundleID = @"fr.vjeantet.alerter";
 NSString * const NotificationCenterUIBundleID = @"com.apple.notificationcenterui";
 
 // Set OS Params
@@ -138,7 +138,7 @@ isMavericks()
            "Note that in some circumstances the first character of a message has to be escaped in order to be recognized.\n" \
            "An example of this is when using an open bracket, which has to be escaped like so: ‘\\[’.\n" \
            "\n" \
-           "For more information see https://github.com/alloy/terminal-notifier.\n",
+           "For more information see https://github.com/vjeantet/alerter.\n",
            appName, appVersion, appName);
 }
 
