@@ -132,6 +132,7 @@ isMavericks()
            "       -contentImage URL  The URL of a image to display attached to the notification (Mavericks+ only)\n" \
            "       -json       Write only event or value to stdout \n" \
            "       -timeout NUMBER    Close the notification after NUMBER seconds.\n" \
+           "       -ignoreDnD         Send notification even if Do Not Disturb is enabled.\n" \
            "\n" \
            "When the user activates or close a notification, the results are logged to stdout as a json struct.\n" \
            "\n" \
@@ -222,7 +223,9 @@ isMavericks()
         
         options[@"uuid"] = [NSString stringWithFormat:@"%ld", self.hash] ;
         
-
+        if([[[NSProcessInfo processInfo] arguments] containsObject:@"-ignoreDnD"] == true) {
+          options[@"ignoreDnD"] = @YES;
+        }
         
         [self deliverNotificationWithTitle:defaults[@"title"] ?: @"Terminal"
                                   subtitle:subtitle
@@ -304,6 +307,10 @@ isMavericks()
     
     if (sound != nil) {
         userNotification.soundName = [sound isEqualToString: @"default"] ? NSUserNotificationDefaultSoundName : sound ;
+    }
+    
+    if(options[@"ignoreDnD"]){
+      [userNotification setValue:@YES forKey:@"_ignoresDoNotDisturb"];
     }
     
     NSUserNotificationCenter *center = [NSUserNotificationCenter defaultUserNotificationCenter];
