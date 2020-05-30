@@ -237,7 +237,7 @@
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = "";
 				CODE_SIGN_IDENTITY = "Apple Development";
-				DEVELOPMENT_TEAM = 2LFUL4P5A7;
+				DEVELOPMENT_TEAM = NQLLJK2GK3;
 				ENABLE_HARDENED_RUNTIME = YES;
 				GCC_PREFIX_HEADER = alerter/Prefix.pch;
 				INFOPLIST_FILE = "$(SRCROOT)/alerter/Info.plist";
@@ -260,7 +260,7 @@
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = "";
 				CODE_SIGN_IDENTITY = "Apple Development";
-				DEVELOPMENT_TEAM = 2LFUL4P5A7;
+				DEVELOPMENT_TEAM = NQLLJK2GK3;
 				ENABLE_HARDENED_RUNTIME = YES;
 				GCC_PREFIX_HEADER = alerter/Prefix.pch;
 				INFOPLIST_FILE = "$(SRCROOT)/alerter/Info.plist";
