@@ -242,7 +242,7 @@
 				GCC_PREFIX_HEADER = alerter/Prefix.pch;
 				INFOPLIST_FILE = "$(SRCROOT)/alerter/Info.plist";
 				MACOSX_DEPLOYMENT_TARGET = 10.15;
-				MARKETING_VERSION = 1.2.0;
+				MARKETING_VERSION = 004;
 				OTHER_CODE_SIGN_FLAGS = "-i fr.vjeantet.${PRODUCT_NAME:rfc1034identifier}";
 				OTHER_LDFLAGS = (
 					"-sectcreate",
@@ -265,7 +265,7 @@
 				GCC_PREFIX_HEADER = alerter/Prefix.pch;
 				INFOPLIST_FILE = "$(SRCROOT)/alerter/Info.plist";
 				MACOSX_DEPLOYMENT_TARGET = 10.15;
-				MARKETING_VERSION = 1.2.0;
+				MARKETING_VERSION = 004;
 				OTHER_CODE_SIGN_FLAGS = "-i fr.vjeantet.${PRODUCT_NAME:rfc1034identifier}";
 				OTHER_LDFLAGS = (
 					"-sectcreate",
