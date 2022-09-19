@@ -170,6 +170,9 @@ isMavericks()
     if (message == nil && !isatty(STDIN_FILENO)) {
         NSData *inputData = [NSData dataWithData:[[NSFileHandle fileHandleWithStandardInput] readDataToEndOfFile]];
         message = [[NSString alloc] initWithData:inputData encoding:NSUTF8StringEncoding];
+        if ([message length] == 0) {
+            message = nil;
+        }
     }
     
     if (message == nil && remove == nil && list == nil) {
