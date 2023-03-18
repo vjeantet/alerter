@@ -6,7 +6,7 @@
 
 alerter is a command-line tool to send Mac OS X User Alerts (Notifications),
 which are available in Mac OS X 10.8 and higher. (even catalina)
-the program ends when the alerter is activated or closed, writing a the activated value to output (stdout), or a json object to describe the alert event.
+the program ends when the alerter is activated or closed, writing the activated value to output (stdout), or a json object to describe the alert event.
 
 Alerts are OS X notifications that stay on screen unless dismissed.
 
@@ -250,7 +250,7 @@ This project is based on a fork of [terminal notifier](https://github.com/julien
 
 All the works are available under the MIT license.
 
-Copyright (C) 2012-2020 Valère Jeantet <valere.jeantet@gmail.com>, Eloy Durán <eloy.de.enige@gmail.com>, Julien Blanchard
+Copyright (C) 2012-2023 Valère Jeantet <valere.jeantet@gmail.com>, Eloy Durán <eloy.de.enige@gmail.com>, Julien Blanchard
 <julien@sideburns.eu>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of

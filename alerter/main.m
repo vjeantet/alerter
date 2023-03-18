@@ -3,7 +3,7 @@
 //  alerter
 //
 //  Created by Valere JEANTET on 18/12/2015.
-//  Copyright © 2020 JEANTET Valere. All rights reserved.
+//  All the works are available under the MIT license.
 //
 
 #import "AppDelegate.h"
