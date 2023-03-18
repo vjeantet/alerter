@@ -11,6 +11,9 @@
 
 AppDelegate * appDelegate ;
 
+// When the termination signal is received, call the 'bye' method of the app delegate,
+// which removes the current notification from the Notification Center
+// and exits the program with a failure status code.
 void SIGTERM_handler(int signum) {
     [appDelegate bye];
     exit(EXIT_FAILURE);

@@ -52,6 +52,10 @@ isMavericks()
     }
 }
 
+// The objectForKeyedSubscript: method takes a key as its argument and returns the value associated with that key
+// in the user defaults.
+// If the value is a string and it starts with a backslash (\), it removes the backslash and returns the rest of the string.
+// Otherwise, it returns the original value.
 @implementation NSUserDefaults (SubscriptAndUnescape)
 - (id)objectForKeyedSubscript:(id)key;
 {
@@ -67,7 +71,9 @@ isMavericks()
 @implementation AppDelegate
 
 
-
+// initializes the user defaults with default values
+// If the OS version is Mavericks (10.9), it sets the value of the "sender" key to "com.apple.Terminal".
+//  Otherwise, if the OS version is Mountain Lion (10.8) or earlier, it sets the value of an empty key to "message".
 +(void)initializeUserDefaults
 {
     NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
@@ -88,7 +94,7 @@ isMavericks()
 }
 
 
-
+// Display the default help message
 - (void)printHelpBanner;
 {
     const char *appName = [[[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleExecutable"] UTF8String];
@@ -143,19 +149,30 @@ isMavericks()
            appName, appVersion, appName);
 }
 
+// Called when the application finishes launching
+// - Checks if the -help command line argument was provided and if so, exit printing the help banner.
+// - Retrieves user input values subtitle, message, remove, list, and sound, use stdin when message is empty
+// - check for mandatories fields, or exit printing the help banner
+// - When list, call listNotificationWithGroupID and exit
+// - Install a fake bundle identifier hook and sets the _fakeBundleIdentifier variable to the value of the sender key.
+// - When remove value is set, call the removeNotificationWithGroupID: to remove a remaining notification
+// - Deliver a notification to the user with given options
 - (void)applicationDidFinishLaunching:(NSNotification *)notification;
 {
+    // Checks if the "-help" command line argument is present and prints a help banner if it is.
     if ([[[NSProcessInfo processInfo] arguments] indexOfObject:@"-help"] != NSNotFound) {
         [self printHelpBanner];
         exit(0);
     }
     
+    // Checks if the Notification Center is running, and exits the application if it is not.
     NSArray *runningProcesses = [[[NSWorkspace sharedWorkspace] runningApplications] valueForKey:@"bundleIdentifier"];
     if ([runningProcesses indexOfObject:NotificationCenterUIBundleID] == NSNotFound) {
         NSLog(@"[!] Unable to post a notification for the current user (%@), as it has no running NotificationCenter instance.", NSUserName());
         exit(1);
     }
     
+    // Prepare configurations values into the defaults map from given inputs
     NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
     
     NSString *subtitle = defaults[@"subtitle"];
@@ -165,17 +182,19 @@ isMavericks()
     NSString *sound    = defaults[@"sound"];
 
     
-    // If there is no message and data is piped to the application, use that
-    // instead.
+    // If the message is nil and standard input is being piped to the application,
+    // read the piped data and set it as the message.
     if (message == nil && !isatty(STDIN_FILENO)) {
         NSData *inputData = [NSData dataWithData:[[NSFileHandle fileHandleWithStandardInput] readDataToEndOfFile]];
         message = [[NSString alloc] initWithData:inputData encoding:NSUTF8StringEncoding];
     }
-    
+
+    // If no message or remove or list command found, print help message and exit.
     if (message == nil && remove == nil && list == nil) {
         [self printHelpBanner];
         exit(1);
     }
+    
     
     if (list) {
         [self listNotificationWithGroupID:list];
@@ -197,6 +216,9 @@ isMavericks()
         if (message == nil) exit(0);
     }
     
+    // deliver the notification if a message exists with the given options dictionary to customize it.
+    // The dictionary values are set based on corresponding user defaults, and some keys are set
+    // based on the command line arguments passed to the application.
     if (message) {
         NSMutableDictionary *options = [NSMutableDictionary dictionary];
         if (defaults[@"closeLabel"])  options[@"closeLabel"]   = defaults[@"closeLabel"];
@@ -235,7 +257,10 @@ isMavericks()
     }
 }
 
-
+// This method takes a URL as an argument and returns an NSImage object with
+// the content.
+// If the URL has no scheme, the method assumes that it is a file URL and
+// prefixes it with 'file://'.
 - (NSImage*)getImageFromURL:(NSString *) url;
 {
     NSURL *imageURL = [NSURL URLWithString:url];
@@ -331,28 +356,6 @@ isMavericks()
     }
 }
 
-
-- (BOOL)executeShellCommand:(NSString *)command;
-{
-    NSPipe *pipe = [NSPipe pipe];
-    NSFileHandle *fileHandle = [pipe fileHandleForReading];
-    
-    NSTask *task = [NSTask new];
-    task.launchPath = @"/bin/sh";
-    task.arguments = @[@"-c", command];
-    task.standardOutput = pipe;
-    task.standardError = pipe;
-    [task launch];
-    
-    NSData *data = nil;
-    NSMutableData *accumulatedData = [NSMutableData data];
-    while ((data = [fileHandle availableData]) && [data length]) {
-        [accumulatedData appendData:data];
-    }
-    
-    [task waitUntilExit];
-    return [task terminationStatus] == 0;
-}
 
 - (BOOL)userNotificationCenter:(NSUserNotificationCenter *)center
      shouldPresentNotification:(NSUserNotification *)notification;
@@ -541,7 +544,13 @@ isMavericks()
     return 1 ;
 }
 
-
+// This method lists all notifications delivered to the Notification Center
+// that belong to the specified groupID. If the groupID argument is set to "ALL",
+// then all notifications are listed. The method iterates through all delivered
+// notifications and builds an array of dictionaries, where each dictionary
+// represents a single notification and contains information such as its groupID,
+// title, subtitle, message, and delivery time. If any notifications are found,
+// the information is serialized to JSON format and printed to the console.
 - (void)listNotificationWithGroupID:(NSString *)listGroupID;
 {
     NSUserNotificationCenter *center = [NSUserNotificationCenter defaultUserNotificationCenter];
@@ -584,8 +593,10 @@ isMavericks()
     }
 }
 
+// This method looks for a delivered notification with a UUID that matches the UUID of
+// the current notification. When a matching notification is found, it is removed from
+// the Notification Center using the removeDeliveredNotification method.
 - (void) bye; {
-    //Look for the notification sent, remove it when found
     NSString *UUID = currentNotification.userInfo[@"uuid"] ;
     for (NSUserNotification *nox in [[NSUserNotificationCenter defaultUserNotificationCenter] deliveredNotifications]) {
         if ([nox.userInfo[@"uuid"] isEqualToString:UUID ]){
