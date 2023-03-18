@@ -187,6 +187,9 @@ isMavericks()
     if (message == nil && !isatty(STDIN_FILENO)) {
         NSData *inputData = [NSData dataWithData:[[NSFileHandle fileHandleWithStandardInput] readDataToEndOfFile]];
         message = [[NSString alloc] initWithData:inputData encoding:NSUTF8StringEncoding];
+        if ([message length] == 0) {
+            message = nil;
+        }
     }
 
     // If no message or remove or list command found, print help message and exit.
