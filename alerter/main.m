@@ -1,13 +1,4 @@
-//
-//  main.m
-//  alerter
-//
-//  Created by Valere JEANTET on 18/12/2015.
-//  All the works are available under the MIT license.
-//
-
 #import "AppDelegate.h"
-
 
 AppDelegate * appDelegate ;
 
@@ -32,4 +23,3 @@ int main(int argc, char *argv[])
     
     return EXIT_SUCCESS;
 }
-

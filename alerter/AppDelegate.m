@@ -1,5 +1,6 @@
 #import "AppDelegate.h"
 #import <objc/runtime.h>
+#import <UserNotifications/UserNotifications.h>
 
 NSString * const TerminalAlerterBundleID = @"fr.vjeantet.alerter";
 NSString * const NotificationCenterUIBundleID = @"com.apple.notificationcenterui";
@@ -11,7 +12,7 @@ NSString * const NotificationCenterUIBundleID = @"com.apple.notificationcenterui
 #define contains(str1, str2) ([str1 rangeOfString: str2 ].location != NSNotFound)
 
 NSString *_fakeBundleIdentifier = nil;
-NSUserNotification *currentNotification = nil ;
+UNNotificationRequest *currentNotification = nil ;
 
 @implementation NSBundle (FakeBundleIdentifier)
 
@@ -285,266 +286,208 @@ isMavericks()
     // First remove earlier notification with the same group ID.
     if (options[@"groupID"]) [self removeNotificationWithGroupID:options[@"groupID"]];
     
-    NSUserNotification *userNotification = [NSUserNotification new];
-    userNotification.title = title;
-    userNotification.subtitle = subtitle;
-    userNotification.informativeText = message;
-    userNotification.userInfo = options;
+    UNMutableNotificationContent *content = [UNMutableNotificationContent new];
+    content.title = title;
+    content.subtitle = subtitle;
+    content.body = message;
+    content.userInfo = options;
     
-    
-    
-    if(isMavericks()){
+    if (isMavericks()) {
         // Mavericks options
-        if(options[@"appIcon"]){
+        if (options[@"appIcon"]) {
             // replacement app icon
-            [userNotification setValue:[self getImageFromURL:options[@"appIcon"]] forKey:@"_identityImage"];
-            [userNotification setValue:@(false) forKey:@"_identityImageHasBorder"];
+            [content setValue:[self getImageFromURL:options[@"appIcon"]] forKey:@"_identityImage"];
+            [content setValue:@(false) forKey:@"_identityImageHasBorder"];
         }
-        if(options[@"contentImage"]){
+        if (options[@"contentImage"]) {
             // content image
-            userNotification.contentImage = [self getImageFromURL:options[@"contentImage"]];
+            content.attachments = @[[UNNotificationAttachment attachmentWithIdentifier:@"contentImage" URL:[NSURL URLWithString:options[@"contentImage"]] options:nil error:nil]];
         }
     }
     
     // Actions
-    if (options[@"actions"]){
-        [userNotification setValue:@YES forKey:@"_showsButtons"];
+    if (options[@"actions"]) {
+        NSMutableArray *actions = [NSMutableArray array];
         NSArray *myActions = [options[@"actions"] componentsSeparatedByString:@","];
-        if (myActions.count > 1) {
-            [userNotification setValue:@YES forKey:@"_alwaysShowAlternateActionMenu"];
-            [userNotification setValue:myActions forKey:@"_alternateActionButtonTitles"];
-            
-            //Main Actions Title
-            if(options[@"dropdownLabel"]){
-                userNotification.actionButtonTitle = options[@"dropdownLabel"];
-                userNotification.hasActionButton = 1 ;
-            }
-        }else{
-            userNotification.actionButtonTitle = options[@"actions"];
+        for (NSString *action in myActions) {
+            [actions addObject:[UNNotificationAction actionWithIdentifier:action title:action options:UNNotificationActionOptionForeground]];
         }
-    }else if (options[@"reply"]) {
-        [userNotification setValue:@YES forKey:@"_showsButtons"];
-        userNotification.hasReplyButton = 1;
-        userNotification.responsePlaceholder = options[@"reply"];
+        UNNotificationCategory *category = [UNNotificationCategory categoryWithIdentifier:@"actionsCategory" actions:actions intentIdentifiers:@[] options:UNNotificationCategoryOptionCustomDismissAction];
+        [[UNUserNotificationCenter currentNotificationCenter] setNotificationCategories:[NSSet setWithObject:category]];
+        content.categoryIdentifier = @"actionsCategory";
+    } else if (options[@"reply"]) {
+        UNTextInputNotificationAction *replyAction = [UNTextInputNotificationAction actionWithIdentifier:@"reply" title:@"Reply" options:UNNotificationActionOptionForeground textInputButtonTitle:@"Send" textInputPlaceholder:options[@"reply"]];
+        UNNotificationCategory *category = [UNNotificationCategory categoryWithIdentifier:@"replyCategory" actions:@[replyAction] intentIdentifiers:@[] options:UNNotificationCategoryOptionCustomDismissAction];
+        [[UNUserNotificationCenter currentNotificationCenter] setNotificationCategories:[NSSet setWithObject:category]];
+        content.categoryIdentifier = @"replyCategory";
     }
     
     // Close button
-    if(options[@"closeLabel"]){
-        userNotification.otherButtonTitle = options[@"closeLabel"];
+    if (options[@"closeLabel"]) {
+        UNNotificationAction *closeAction = [UNNotificationAction actionWithIdentifier:@"close" title:options[@"closeLabel"] options:UNNotificationActionOptionDestructive];
+        UNNotificationCategory *category = [UNNotificationCategory categoryWithIdentifier:@"closeCategory" actions:@[closeAction] intentIdentifiers:@[] options:UNNotificationCategoryOptionCustomDismissAction];
+        [[UNUserNotificationCenter currentNotificationCenter] setNotificationCategories:[NSSet setWithObject:category]];
+        content.categoryIdentifier = @"closeCategory";
     }
     
     if (sound != nil) {
-        userNotification.soundName = [sound isEqualToString: @"default"] ? NSUserNotificationDefaultSoundName : sound ;
+        content.sound = [sound isEqualToString:@"default"] ? [UNNotificationSound defaultSound] : [UNNotificationSound soundNamed:sound];
     }
     
-    if(options[@"ignoreDnD"]){
-      [userNotification setValue:@YES forKey:@"_ignoresDoNotDisturb"];
+    if (options[@"ignoreDnD"]) {
+        [content setValue:@YES forKey:@"_ignoresDoNotDisturb"];
     }
     
-    NSUserNotificationCenter *center = [NSUserNotificationCenter defaultUserNotificationCenter];
-    center.delegate = self;
-        [center deliverNotification:userNotification];
+    UNNotificationRequest *request = [UNNotificationRequest requestWithIdentifier:options[@"uuid"] content:content trigger:nil];
+    [[UNUserNotificationCenter currentNotificationCenter] addNotificationRequest:request withCompletionHandler:nil];
+    currentNotification = request;
 }
 
 
 
 - (void)removeNotificationWithGroupID:(NSString *)groupID;
 {
-    NSUserNotificationCenter *center = [NSUserNotificationCenter defaultUserNotificationCenter];
-    for (NSUserNotification *userNotification in center.deliveredNotifications) {
-        if ([@"ALL" isEqualToString:groupID] || [userNotification.userInfo[@"groupID"] isEqualToString:groupID]) {
-            [center removeDeliveredNotification:userNotification];
-            [center removeDeliveredNotification:userNotification];
+    UNUserNotificationCenter *center = [UNUserNotificationCenter currentNotificationCenter];
+    [center getDeliveredNotificationsWithCompletionHandler:^(NSArray<UNNotification *> * _Nonnull notifications) {
+        for (UNNotification *notification in notifications) {
+            if ([@"ALL" isEqualToString:groupID] || [notification.request.content.userInfo[@"groupID"] isEqualToString:groupID]) {
+                [center removeDeliveredNotificationsWithIdentifiers:@[notification.request.identifier]];
+            }
         }
-    }
+    }];
 }
 
 
-- (BOOL)userNotificationCenter:(NSUserNotificationCenter *)center
-     shouldPresentNotification:(NSUserNotification *)notification;
+- (BOOL)userNotificationCenter:(UNUserNotificationCenter *)center
+     shouldPresentNotification:(UNNotification *)notification;
 {
     return YES;
 }
 
 // Once the notification is delivered we can exit. (Only if no actions or reply
 // WORKS
-- (void)userNotificationCenter:(NSUserNotificationCenter *)center
-        didDeliverNotification:(NSUserNotification *)userNotification;
+- (void)userNotificationCenter:(UNUserNotificationCenter *)center
+        didDeliverNotification:(UNNotification *)notification;
 {
-    currentNotification = userNotification ;
+    currentNotification = notification.request;
 
-    dispatch_async(dispatch_get_global_queue( DISPATCH_QUEUE_PRIORITY_DEFAULT, 0),
-                   ^{
-                       __block BOOL notificationStillPresent;
-                       do {
-                           notificationStillPresent = NO;
-                           for (NSUserNotification *nox in [[NSUserNotificationCenter defaultUserNotificationCenter] deliveredNotifications]) {
-                               if ([nox.userInfo[@"uuid"]  isEqualToString:[NSString stringWithFormat:@"%ld", self.hash] ]) notificationStillPresent = YES;
-                           }
-                           if (notificationStillPresent) [NSThread sleepForTimeInterval:0.20f];
-                       } while (notificationStillPresent);
-                           dispatch_async(dispatch_get_main_queue(), ^{
-                               NSDictionary *udict = @{@"activationType" : @"closed", @"activationValue" : userNotification.otherButtonTitle};
-                               [self Quit:udict notification:userNotification] ;
-                               exit(0);
-                           });
-                });
+    dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+        __block BOOL notificationStillPresent;
+        do {
+            notificationStillPresent = NO;
+            [center getDeliveredNotificationsWithCompletionHandler:^(NSArray<UNNotification *> * _Nonnull notifications) {
+                for (UNNotification *nox in notifications) {
+                    if ([nox.request.identifier isEqualToString:[NSString stringWithFormat:@"%ld", self.hash]]) {
+                        notificationStillPresent = YES;
+                    }
+                }
+            }];
+            if (notificationStillPresent) [NSThread sleepForTimeInterval:0.20f];
+        } while (notificationStillPresent);
+        dispatch_async(dispatch_get_main_queue(), ^{
+            NSDictionary *udict = @{@"activationType" : @"closed", @"activationValue" : notification.request.content.userInfo[@"closeLabel"]};
+            [self Quit:udict notification:notification] ;
+            exit(0);
+        });
+    });
     
-    
-    
-    if ([userNotification.userInfo[@"timeout"] integerValue] > 0){
-        dispatch_async(dispatch_get_global_queue( DISPATCH_QUEUE_PRIORITY_DEFAULT, 0),
-                       ^{
-                           [NSThread sleepForTimeInterval:[userNotification.userInfo[@"timeout"] integerValue]];
-                               [center removeDeliveredNotification:currentNotification];
-                               [center removeDeliveredNotification:userNotification];
-                                NSDictionary *udict = @{@"activationType" : @"timeout"};
-                               [self Quit:udict notification:userNotification] ;
-                                exit(0);
-
-                       });
+    if ([notification.request.content.userInfo[@"timeout"] integerValue] > 0) {
+        dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+            [NSThread sleepForTimeInterval:[notification.request.content.userInfo[@"timeout"] integerValue]];
+            [center removeDeliveredNotificationsWithIdentifiers:@[currentNotification.identifier]];
+            NSDictionary *udict = @{@"activationType" : @"timeout"};
+            [self Quit:udict notification:notification] ;
+            exit(0);
+        });
     }
-
-    
-    
-    
 }
-//-(void)performSearch:(NSString *)UUID {
-//    BOOL notificationStillPresent;
-//    do {
-//        notificationStillPresent = NO;
-//        for (NSUserNotification *nox in [[NSUserNotificationCenter defaultUserNotificationCenter] deliveredNotifications]) {
-//            NSLog(@"%@  %@", [NSString stringWithFormat:@"%ld", self.hash], nox.userInfo[@"uuid"]);
-//            if ([nox.userInfo[@"uuid"]  isEqualToString:[NSString stringWithFormat:@"%ld", self.hash] ]) notificationStillPresent = YES;
-//        }
-//        if (notificationStillPresent) [NSThread sleepForTimeInterval:0.20f];
-//    } while (notificationStillPresent);
-//    dispatch_async(dispatch_get_global_queue( DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
-//        NSLog(@"quiiting  %@", [NSString stringWithFormat:@"%ld", self.hash]);
-//        NSDictionary *udict = @{@"activationType" : @"Gone"  };
-//        [self Quit:udict notification:currentNotification] ;
-//        exit(0);
-//    });
-//
-//    [NSThread exit];
-//}
-//
-//- (void)userNotificationCenter:(NSUserNotificationCenter *)center
-//        didDeliverNotification:(NSUserNotification *)userNotification;
-//{
-//    currentNotification = userNotification ;
-//    NSString *UUID = userNotification.userInfo[@"uuid"] ;
-//
-//    [NSThread detachNewThreadSelector:@selector(performSearch:) toTarget:self withObject:UUID];
-//
-//
-//}
 
 
+- (void)userNotificationCenter:(UNUserNotificationCenter *)center
+       didActivateNotification:(UNNotification *)notification {
 
-
-- (void)userNotificationCenter:(NSUserNotificationCenter *)center
-       didActivateNotification:(NSUserNotification *)notification {
-
-    if ([notification.userInfo[@"uuid"]  isNotEqualTo:[NSString stringWithFormat:@"%ld", self.hash] ]) {
+    if (![notification.request.identifier isEqualToString:[NSString stringWithFormat:@"%ld", self.hash]]) {
         return;
     };
     
-    
-    unsigned long long additionalActionIndex = ULLONG_MAX;
-    
-    NSString* ActionsClicked = @"" ;
-    switch (notification.activationType) {
-            
-        case NSUserNotificationActivationTypeAdditionalActionClicked:
-        case NSUserNotificationActivationTypeActionButtonClicked:
-            if ([[(NSObject*)notification valueForKey:@"_alternateActionButtonTitles"] count] > 1 ){
-                NSNumber *alternateActionIndex = [(NSObject*)notification valueForKey:@"_alternateActionIndex"];
-                additionalActionIndex = [alternateActionIndex unsignedLongLongValue];
-                ActionsClicked = [(NSObject*)notification valueForKey:@"_alternateActionButtonTitles"][additionalActionIndex];
-                
-                NSDictionary *udict = @{@"activationType" : @"actionClicked", @"activationValue" : ActionsClicked, @"activationValueIndex" :[NSString stringWithFormat:@"%llu", additionalActionIndex]};
-                [self Quit:udict notification:notification] ;
-            }else{
-                NSDictionary *udict = @{@"activationType" : @"actionClicked", @"activationValue" : notification.actionButtonTitle};
-                [self Quit:udict notification:notification] ;
-            }
+    NSString *ActionsClicked = @"";
+    switch (notification.request.content.categoryIdentifier) {
+        case @"actionsCategory": {
+            NSArray *actions = notification.request.content.userInfo[@"actions"];
+            NSUInteger actionIndex = [actions indexOfObject:notification.request.identifier];
+            ActionsClicked = actions[actionIndex];
+            NSDictionary *udict = @{@"activationType" : @"actionClicked", @"activationValue" : ActionsClicked, @"activationValueIndex" : [NSString stringWithFormat:@"%lu", (unsigned long)actionIndex]};
+            [self Quit:udict notification:notification];
             break;
-            
-        case NSUserNotificationActivationTypeContentsClicked:
-            [self Quit:@{@"activationType" : @"contentsClicked"} notification:notification] ;
+        }
+        case @"replyCategory": {
+            NSString *response = notification.request.content.userInfo[@"reply"];
+            NSDictionary *udict = @{@"activationType" : @"replied", @"activationValue" : response};
+            [self Quit:udict notification:notification];
             break;
-            
-        case NSUserNotificationActivationTypeReplied:
-            [self Quit:@{@"activationType" : @"replied",@"activationValue":notification.response.string} notification:notification] ;
+        }
+        case @"closeCategory": {
+            NSDictionary *udict = @{@"activationType" : @"closed", @"activationValue" : notification.request.content.userInfo[@"closeLabel"]};
+            [self Quit:udict notification:notification];
             break;
-        case NSUserNotificationActivationTypeNone:
+        }
         default:
-            [self Quit:@{@"activationType" : @"none"} notification:notification] ;
+            [self Quit:@{@"activationType" : @"none"} notification:notification];
             break;
     }
     
-    
-    [center removeDeliveredNotification:notification];
-    [center removeDeliveredNotification:currentNotification];
-    exit(0) ;
+    [center removeDeliveredNotificationsWithIdentifiers:@[notification.request.identifier]];
+    exit(0);
 }
 
-- (BOOL)Quit:(NSDictionary *)udict notification:(NSUserNotification *)notification;
+- (BOOL)Quit:(NSDictionary *)udict notification:(UNNotification *)notification;
 {
-    if ([notification.userInfo[@"output"] isEqualToString:@"outputEvent"]) {
+    if ([notification.request.content.userInfo[@"output"] isEqualToString:@"outputEvent"]) {
         if ([udict[@"activationType"] isEqualToString:@"closed"]) {
             if ([udict[@"activationValue"] isEqualToString:@""]) {
-                printf("%s", "@CLOSED" );
-            }else{
-                printf("%s", [udict[@"activationValue"] UTF8String] );
+                printf("%s", "@CLOSED");
+            } else {
+                printf("%s", [udict[@"activationValue"] UTF8String]);
             }
-        } else  if ([udict[@"activationType"] isEqualToString:@"timeout"]) {
-            printf("%s", "@TIMEOUT" );
-        } else  if ([udict[@"activationType"] isEqualToString:@"contentsClicked"]) {
-            printf("%s", "@CONTENTCLICKED" );
-        } else{
+        } else if ([udict[@"activationType"] isEqualToString:@"timeout"]) {
+            printf("%s", "@TIMEOUT");
+        } else if ([udict[@"activationType"] isEqualToString:@"contentsClicked"]) {
+            printf("%s", "@CONTENTCLICKED");
+        } else {
             if ([udict[@"activationValue"] isEqualToString:@""]) {
-                printf("%s", "@ACTIONCLICKED" );
-            }else{
-                printf("%s", [udict[@"activationValue"] UTF8String] );
+                printf("%s", "@ACTIONCLICKED");
+            } else {
+                printf("%s", [udict[@"activationValue"] UTF8String]);
             }
         }
-
-        return 1 ;
+        return 1;
     }
-    
-    
-    
     
     NSDateFormatter *dateFormatter = [[NSDateFormatter alloc] init];
     dateFormatter.dateFormat = @"yyyy-MM-dd HH:mm:ss Z";
     
-    
     // Dictionary with several key/value pairs and the above array of arrays
     NSMutableDictionary *dict = [NSMutableDictionary dictionary];
-    [dict addEntriesFromDictionary:udict] ;
-    [dict setValue:[dateFormatter stringFromDate:notification.actualDeliveryDate] forKey:@"deliveredAt"] ;
-    [dict setValue:[dateFormatter stringFromDate:[NSDate new]] forKey:@"activationAt"] ;
+    [dict addEntriesFromDictionary:udict];
+    [dict setValue:[dateFormatter stringFromDate:notification.date] forKey:@"deliveredAt"];
+    [dict setValue:[dateFormatter stringFromDate:[NSDate new]] forKey:@"activationAt"];
     
     NSError *error = nil;
     NSData *json;
     
-    // Dictionary convertable to JSON ?
-    if ([NSJSONSerialization isValidJSONObject:dict])
-    {
+    // Dictionary convertable to JSON?
+    if ([NSJSONSerialization isValidJSONObject:dict]) {
         // Serialize the dictionary
         json = [NSJSONSerialization dataWithJSONObject:dict options:NSJSONWritingPrettyPrinted error:&error];
         
         // If no errors, let's view the JSON
-        if (json != nil && error == nil)
-        {
+        if (json != nil && error == nil) {
             NSString *jsonString = [[NSString alloc] initWithData:json encoding:NSUTF8StringEncoding];
             printf("%s", [jsonString cStringUsingEncoding:NSUTF8StringEncoding]);
         }
     }
     
-    return 1 ;
+    return 1;
 }
 
 // This method lists all notifications delivered to the Notification Center
@@ -556,57 +499,58 @@ isMavericks()
 // the information is serialized to JSON format and printed to the console.
 - (void)listNotificationWithGroupID:(NSString *)listGroupID;
 {
-    NSUserNotificationCenter *center = [NSUserNotificationCenter defaultUserNotificationCenter];
+    UNUserNotificationCenter *center = [UNUserNotificationCenter currentNotificationCenter];
     
-    NSMutableArray *lines = [NSMutableArray array];
-    for (NSUserNotification *userNotification in center.deliveredNotifications) {
-        NSString *deliveredgroupID = userNotification.userInfo[@"groupID"];
-        NSString *title            = userNotification.title;
-        NSString *subtitle         = userNotification.subtitle;
-        NSString *message          = userNotification.informativeText;
-        NSString *deliveredAt      = [userNotification.actualDeliveryDate description];
-        if ([@"ALL" isEqualToString:listGroupID] || [deliveredgroupID isEqualToString:listGroupID]) {
-            NSMutableDictionary *dict = [NSMutableDictionary dictionary];
-            [dict setValue:deliveredgroupID forKey:@"GroupID"] ;
-            [dict setValue:title forKey:@"Title"] ;
-            [dict setValue:subtitle forKey:@"subtitle"] ;
-            [dict setValue:message forKey:@"message"] ;
-            [dict setValue:deliveredAt forKey:@"deliveredAt"] ;
-            [lines addObject:dict];
-        }
-    }
-    
-    if (lines.count > 0) {
-        NSData *json;
-        NSError *error = nil;
-        // Dictionary convertable to JSON ?
-        if ([NSJSONSerialization isValidJSONObject:lines])
-        {
-            // Serialize the dictionary
-            json = [NSJSONSerialization dataWithJSONObject:lines options:NSJSONWritingPrettyPrinted error:&error];
-            
-            // If no errors, let's view the JSON
-            if (json != nil && error == nil)
-            {
-                NSString *jsonString = [[NSString alloc] initWithData:json encoding:NSUTF8StringEncoding];
-                printf("%s", [jsonString cStringUsingEncoding:NSUTF8StringEncoding]);
+    [center getDeliveredNotificationsWithCompletionHandler:^(NSArray<UNNotification *> * _Nonnull notifications) {
+        NSMutableArray *lines = [NSMutableArray array];
+        for (UNNotification *notification in notifications) {
+            NSString *deliveredgroupID = notification.request.content.userInfo[@"groupID"];
+            NSString *title = notification.request.content.title;
+            NSString *subtitle = notification.request.content.subtitle;
+            NSString *message = notification.request.content.body;
+            NSString *deliveredAt = [notification.date description];
+            if ([@"ALL" isEqualToString:listGroupID] || [deliveredgroupID isEqualToString:listGroupID]) {
+                NSMutableDictionary *dict = [NSMutableDictionary dictionary];
+                [dict setValue:deliveredgroupID forKey:@"GroupID"];
+                [dict setValue:title forKey:@"Title"];
+                [dict setValue:subtitle forKey:@"subtitle"];
+                [dict setValue:message forKey:@"message"];
+                [dict setValue:deliveredAt forKey:@"deliveredAt"];
+                [lines addObject:dict];
             }
         }
         
-    }
+        if (lines.count > 0) {
+            NSData *json;
+            NSError *error = nil;
+            // Dictionary convertable to JSON?
+            if ([NSJSONSerialization isValidJSONObject:lines]) {
+                // Serialize the dictionary
+                json = [NSJSONSerialization dataWithJSONObject:lines options:NSJSONWritingPrettyPrinted error:&error];
+                
+                // If no errors, let's view the JSON
+                if (json != nil && error == nil) {
+                    NSString *jsonString = [[NSString alloc] initWithData:json encoding:NSUTF8StringEncoding];
+                    printf("%s", [jsonString cStringUsingEncoding:NSUTF8StringEncoding]);
+                }
+            }
+        }
+    }];
 }
 
 // This method looks for a delivered notification with a UUID that matches the UUID of
 // the current notification. When a matching notification is found, it is removed from
 // the Notification Center using the removeDeliveredNotification method.
-- (void) bye; {
-    NSString *UUID = currentNotification.userInfo[@"uuid"] ;
-    for (NSUserNotification *nox in [[NSUserNotificationCenter defaultUserNotificationCenter] deliveredNotifications]) {
-        if ([nox.userInfo[@"uuid"] isEqualToString:UUID ]){
-            [[NSUserNotificationCenter defaultUserNotificationCenter] removeDeliveredNotification:nox] ;
-            [[NSUserNotificationCenter defaultUserNotificationCenter] removeDeliveredNotification:nox] ;
+- (void)bye; {
+    NSString *UUID = currentNotification.identifier;
+    UNUserNotificationCenter *center = [UNUserNotificationCenter currentNotificationCenter];
+    [center getDeliveredNotificationsWithCompletionHandler:^(NSArray<UNNotification *> * _Nonnull notifications) {
+        for (UNNotification *nox in notifications) {
+            if ([nox.request.identifier isEqualToString:UUID]) {
+                [center removeDeliveredNotificationsWithIdentifiers:@[nox.request.identifier]];
+            }
         }
-    }
+    }];
 }
 
 @end
