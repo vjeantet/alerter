@@ -4,9 +4,21 @@
     <a href="LICENSE.md"><img src="https://badgen.net/github/license/vjeantet/alerter" /></a>
 </p>
 
+> **🎉 Alerter 2.0 Now Available!**
+> This project has been **rebuilt in Golang** with the modern **UserNotifications framework**.
+> 📖 See [README-GOLANG.md](README-GOLANG.md) for the new version
+> 📋 See [MIGRATION.md](MIGRATION.md) for migration guide
+> 🏗️ See [BUILD.md](BUILD.md) for build instructions
+
+---
+
+## About This Version (1.x - Legacy)
+
 alerter is a command-line tool to send Mac OS X User Alerts (Notifications),
 which are available in Mac OS X 10.8 and higher. (even catalina)
 the program ends when the alerter is activated or closed, writing the activated value to output (stdout), or a json object to describe the alert event.
+
+**⚠️ Note:** This version uses the deprecated NSUserNotification API. For macOS 11.0+ (Big Sur and later), please use [Alerter 2.0](README-GOLANG.md).
 
 Alerts are OS X notifications that stay on screen unless dismissed.
 
