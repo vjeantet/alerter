@@ -50,8 +50,8 @@ struct AlerterCommand: ParsableCommand {
     @Option(help: "Group ID for notification replacement.")
     var group: String?
 
-    @Option(help: "Bundle identifier of the app to impersonate. (default: com.apple.Terminal)")
-    var sender: String = "com.apple.Terminal"
+    @Option(help: "Bundle identifier of the app to impersonate. (default: fr.vjeantet.alerter)")
+    var sender: String = "fr.vjeantet.alerter"
 
     @Option(help: "URL or path of an image to use as app icon.")
     var appIcon: String?

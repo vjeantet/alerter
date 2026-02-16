@@ -27,3 +27,5 @@ DerivedData
 .DS_Store
 .build/
 .claude/
+.swiftpm/
+dist/

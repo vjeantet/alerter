@@ -23,7 +23,10 @@ let package = Package(
                 .product(name: "ArgumentParser", package: "swift-argument-parser"),
             ],
             path: "Sources/Alerter",
-            swiftSettings: [.swiftLanguageMode(.v5)]
+            swiftSettings: [
+                .swiftLanguageMode(.v5),
+                .unsafeFlags(["-suppress-warnings"]),
+            ]
         ),
     ]
 )
