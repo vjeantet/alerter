@@ -30,21 +30,26 @@ Open a notification in the top-right corner of your screen and display one or mo
 
 ## Installation
 
+### Homebrew (recommended)
+
+```bash
+brew install vjeantet/tap/alerter
+```
+
+### Manual
+
 1. Download the zipped precompiled binary from the
 [releases section](https://github.com/vjeantet/alerter/releases).
 2. Extract the binary.
-3. Use as described below.
+3. Place it in a directory listed in your `$PATH` (e.g. `/usr/local/bin`).
 
-### Adding to `$PATH`
+## Release workflow
 
-If you don't want to have to specify the absolute/relative path to the binary, you can place the binary in any directory that is listed in your `$PATH` so that your system can automatically find it.
+Versioning uses the format `YY.N` (e.g. `26.1`, `26.2`). The version is bumped automatically.
 
-If you would like to see which directories are currently in your `$PATH`, you can run `echo $PATH`.
-
-You can use the `cp` command to copy the binary to your chosen directory. For example:
-
-```shell
-cp ~/Downloads/alerter /path/to/directory/you/choose/
+```
+1. ./scripts/release.sh                    # bump version, build, sign, notarize, tag, GitHub Release
+2. ./scripts/update-homebrew-formula.sh     # update formula in vjeantet/homebrew-tap
 ```
 
 ## Usage

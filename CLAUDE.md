@@ -51,3 +51,20 @@ Two SPM targets:
 - **NSUserNotificationCenter is deprecated** since macOS 10.15. The project uses Swift 5 language mode (`swiftSettings: [.swiftLanguageMode(.v5)]`) to allow these deprecated APIs without strict concurrency errors.
 - **Dependency:** `apple/swift-argument-parser` (~> 1.3) via SPM.
 - **Deployment target:** macOS 13.0.
+
+## Versioning
+
+Format: **`YY.N`** — `YY` = last 2 digits of the current year, `N` = auto-incrementing number (resets to 1 each year). Examples: `26.1`, `26.2`, `27.1`.
+
+The version is determined automatically by `release.sh` based on existing git tags (`v26.*`). No manual version editing needed.
+
+## Release Workflow
+
+```
+1. ./scripts/release.sh                    # bump version, build, sign, notarize, tag, GitHub Release
+2. ./scripts/update-homebrew-formula.sh     # update formula in vjeantet/homebrew-tap
+```
+
+- `release.sh` auto-bumps the version in `AlerterCommand.swift`, commits, then builds, signs, notarizes (.zip + .pkg), creates a git tag `v$VERSION`, and publishes a GitHub Release with both assets.
+- `update-homebrew-formula.sh` computes the SHA256 of the .zip, clones `vjeantet/homebrew-tap`, updates `Formula/alerter.rb`, and pushes.
+- Homebrew tap: `vjeantet/homebrew-tap` — users install via `brew install vjeantet/tap/alerter`.
