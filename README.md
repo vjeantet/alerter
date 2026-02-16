@@ -23,11 +23,13 @@ Displays a notification with one or more action buttons to click on.
 * Set the alert icon, title, subtitle, and image.
 * Capture text typed by the user in reply-type alerts.
 * Timeout: automatically close the alert after a delay.
+* Schedule notifications with a delay or at a specific time, with optional repeat.
+* Set the interruption level (passive, active, timeSensitive, critical).
+* Add SF Symbol icons to action buttons.
 * Customize the close button label.
 * Customize the actions dropdown label.
 * Play a sound when delivering the notification.
 * Plain text or JSON output for alert events (closed, timeout, replied, activated, etc.).
-* Ignore Do Not Disturb mode.
 * Gracefully close the notification on SIGINT and SIGTERM.
 
 ## Installation
@@ -107,6 +109,26 @@ What is the name of this release?
 
 ![What is the name of this release](/img4.png?raw=true "")
 
+Schedule a notification in 5 seconds
+```
+./alerter --message "Coffee break!" --delay 5
+```
+
+Schedule a daily reminder
+```
+./alerter --message "Stand up!" --at "09:00" --repeat
+```
+
+Time-sensitive notification (bypasses Focus/DND)
+```
+./alerter --message "Server is down!" --interruption-level timeSensitive
+```
+
+Action buttons with SF Symbol icons
+```
+./alerter --message "Deploy now?" --actions "Accept,Reject" --action-icons "checkmark.circle,xmark.circle"
+```
+
 ## Options
 
 At a minimum, you must specify either `--message`, `--remove`, or `--list`.
@@ -137,10 +159,12 @@ Cannot be combined with `--reply`.
 
 -------------------------------------------------------------------------------
 
-`--dropdownLabel VALUE`
+`--dropdownLabel VALUE` *(deprecated)*
 
 The label for the actions dropdown (only used when multiple `--actions` values are provided).
 Cannot be combined with `--reply`.
+
+**Deprecated: UNUserNotificationCenter displays actions as flat buttons. This option is ignored.**
 
 -------------------------------------------------------------------------------
 
@@ -165,6 +189,53 @@ The subtitle of the notification.
 `--timeout NUMBER`
 
 Automatically close the notification after NUMBER seconds. Defaults to 0 (no timeout).
+
+-------------------------------------------------------------------------------
+
+`--delay SECONDS`
+
+Deliver the notification after SECONDS seconds instead of immediately.
+When combined with `--repeat`, the delay must be at least 60 seconds (macOS requirement).
+Cannot be combined with `--at`.
+
+-------------------------------------------------------------------------------
+
+`--at TIME`
+
+Deliver the notification at a specific time. Accepts two formats:
+* `HH:mm` — next occurrence of that time (e.g. `"14:30"`).
+* `yyyy-MM-dd HH:mm` — a specific date and time (e.g. `"2026-03-15 09:00"`).
+
+Cannot be combined with `--delay`.
+
+-------------------------------------------------------------------------------
+
+`--repeat`
+
+Repeat the notification. Requires `--delay` (>= 60 seconds) or `--at`.
+The process stays alive and waits for user interaction with the first occurrence.
+
+-------------------------------------------------------------------------------
+
+`--interruption-level VALUE`
+
+The interruption level of the notification. Possible values:
+* `passive` — delivered silently, no sound or screen wake.
+* `active` — default behavior.
+* `timeSensitive` — delivered even during Focus/Do Not Disturb.
+* `critical` — always delivered, even with the ringer switch off (requires entitlement).
+
+Requires macOS 12.0 or later.
+
+-------------------------------------------------------------------------------
+
+`--action-icons VALUE1,VALUE2,...`
+
+Comma-separated [SF Symbol](https://developer.apple.com/sf-symbols/) names to display as icons on action buttons.
+Icons are matched by position with `--actions` values. If fewer icons than actions are provided, the remaining actions have no icon.
+Requires `--actions`.
+
+Example: `--actions "Accept,Reject" --action-icons "checkmark.circle,xmark.circle"`
 
 -------------------------------------------------------------------------------
 
@@ -223,27 +294,25 @@ application instead of alerter.
 
 -------------------------------------------------------------------------------
 
-`--appIcon PATH`
+`--appIcon PATH` *(deprecated)*
 
 The path or URL of an image to display instead of the application icon.
 
-**WARNING: This option relies on a private API and may break in future macOS releases.**
+**WARNING: Not supported with UNUserNotificationCenter. This option is ignored.**
 
 -------------------------------------------------------------------------------
 
 `--contentImage PATH`
 
-The path or URL of an image to display inside the notification.
-
-**WARNING: This option relies on a private API and may break in future macOS releases.**
+The path or URL of an image attached to the notification.
 
 -------------------------------------------------------------------------------
 
-`--ignoreDnd`
+`--ignoreDnd` *(deprecated)*
 
 Sends the notification even if Do Not Disturb is enabled.
 
-**WARNING: This option relies on a private API and may break in future macOS releases.**
+**Deprecated: Use `--interruption-level timeSensitive` instead. This option is ignored.**
 
 -------------------------------------------------------------------------------
 

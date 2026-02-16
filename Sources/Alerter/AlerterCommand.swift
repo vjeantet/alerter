@@ -69,6 +69,21 @@ struct AlerterCommand: ParsableCommand {
     @Flag(help: "Send notification even if Do Not Disturb is enabled.")
     var ignoreDnd: Bool = false
 
+    @Option(help: "Interruption level: passive, active (default), timeSensitive, or critical.")
+    var interruptionLevel: String?
+
+    @Option(help: "Deliver notification after N seconds.")
+    var delay: Double?
+
+    @Option(help: "Deliver notification at a specific time (HH:mm or yyyy-MM-dd HH:mm).")
+    var at: String?
+
+    @Flag(help: "Repeat the notification (requires --delay >= 60 or --at).")
+    var `repeat`: Bool = false
+
+    @Option(help: "Comma-separated SF Symbol names for action icons (matched by position with --actions).")
+    var actionIcons: String?
+
     // Internal flag: request notification authorization and exit (launched via `open`)
     @Flag(name: .long, help: .hidden)
     var authorizeNotifications: Bool = false
@@ -94,6 +109,39 @@ struct AlerterCommand: ParsableCommand {
 
         if message == nil && remove == nil && list == nil {
             throw ValidationError("At least one of --message, --remove, or --list is required.")
+        }
+
+        // --interruption-level validation
+        if let level = interruptionLevel {
+            let valid = ["passive", "active", "timeSensitive", "critical"]
+            if !valid.contains(level) {
+                throw ValidationError("Invalid --interruption-level '\(level)'. Must be one of: \(valid.joined(separator: ", ")).")
+            }
+        }
+
+        // --delay / --at mutual exclusivity
+        if delay != nil && at != nil {
+            throw ValidationError("--delay and --at are mutually exclusive.")
+        }
+
+        // --delay must be > 0
+        if let d = delay, d <= 0 {
+            throw ValidationError("--delay must be greater than 0.")
+        }
+
+        // --repeat requires --delay or --at
+        if `repeat` && delay == nil && at == nil {
+            throw ValidationError("--repeat requires --delay or --at.")
+        }
+
+        // --repeat + --delay requires delay >= 60
+        if `repeat`, let d = delay, d < 60 {
+            throw ValidationError("--repeat with --delay requires a delay of at least 60 seconds.")
+        }
+
+        // --action-icons requires --actions
+        if actionIcons != nil && actions == nil {
+            throw ValidationError("--action-icons requires --actions.")
         }
     }
 
@@ -179,7 +227,12 @@ struct AlerterCommand: ParsableCommand {
                 timeout: timeout,
                 outputJSON: json,
                 ignoreDnD: ignoreDnd,
-                uuid: "\(NSApplication.shared.hash)"
+                uuid: "\(NSApplication.shared.hash)",
+                interruptionLevel: interruptionLevel,
+                delay: delay,
+                scheduledDateString: at,
+                repeats: `repeat`,
+                actionIcons: actionIcons?.components(separatedBy: ",")
             )
 
             // Set activation policy for notification display

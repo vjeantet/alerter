@@ -17,6 +17,11 @@ struct NotificationConfig {
     let outputJSON: Bool
     let ignoreDnD: Bool
     let uuid: String
+    let interruptionLevel: String?
+    let delay: Double?
+    let scheduledDateString: String?
+    let repeats: Bool
+    let actionIcons: [String]?
 }
 
 private let kCategoryIdentifier = "ALERTER_CATEGORY"
@@ -180,7 +185,7 @@ class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
             printStderr("Warning: --appIcon is not supported with UNUserNotificationCenter (no public API equivalent). Ignored.")
         }
         if config.ignoreDnD {
-            printStderr("Warning: --ignoreDnd is not supported with UNUserNotificationCenter (no public API equivalent). Ignored.")
+            printStderr("Warning: --ignoreDnd is not supported with UNUserNotificationCenter. Use --interruption-level timeSensitive instead.")
         }
         if let _ = config.dropdownLabel {
             printStderr("Warning: --dropdownLabel is not supported with UNUserNotificationCenter. Actions will be shown as flat buttons.")
@@ -189,9 +194,29 @@ class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
             printStderr("Warning: macOS limits notification actions to \(kMaxActions). Extra actions will be ignored.")
         }
 
-        // Deliver immediately (nil trigger)
+        // Interruption level
+        if let level = config.interruptionLevel {
+            switch level {
+            case "passive": content.interruptionLevel = .passive
+            case "timeSensitive": content.interruptionLevel = .timeSensitive
+            case "critical": content.interruptionLevel = .critical
+            default: content.interruptionLevel = .active
+            }
+        }
+
+        // Build trigger (delay, at, or immediate)
+        let trigger: UNNotificationTrigger?
+        if let delay = config.delay {
+            trigger = UNTimeIntervalNotificationTrigger(timeInterval: delay, repeats: config.repeats)
+        } else if let dateStr = config.scheduledDateString {
+            let components = parseDateComponents(dateStr)
+            trigger = UNCalendarNotificationTrigger(dateMatching: components, repeats: config.repeats)
+        } else {
+            trigger = nil
+        }
+
         let requestIdentifier = config.uuid
-        let request = UNNotificationRequest(identifier: requestIdentifier, content: content, trigger: nil)
+        let request = UNNotificationRequest(identifier: requestIdentifier, content: content, trigger: trigger)
 
         center.add(request) { error in
             if let error = error {
@@ -417,10 +442,16 @@ class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
             // Button actions (max kMaxActions)
             let limit = min(actionTitles.count, kMaxActions)
             for i in 0..<limit {
+                let icon: UNNotificationActionIcon? = if let icons = config.actionIcons, i < icons.count {
+                    UNNotificationActionIcon(systemImageName: icons[i])
+                } else {
+                    nil
+                }
                 let action = UNNotificationAction(
                     identifier: "ACTION_\(i)",
                     title: actionTitles[i],
-                    options: []
+                    options: [],
+                    icon: icon
                 )
                 actions.append(action)
             }
@@ -472,6 +503,27 @@ class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
                 return nil
             }
         }
+    }
+
+    private func parseDateComponents(_ dateStr: String) -> DateComponents {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+
+        // Try "yyyy-MM-dd HH:mm" first
+        formatter.dateFormat = "yyyy-MM-dd HH:mm"
+        if let date = formatter.date(from: dateStr) {
+            return Calendar.current.dateComponents([.year, .month, .day, .hour, .minute], from: date)
+        }
+
+        // Try "HH:mm" (next occurrence)
+        formatter.dateFormat = "HH:mm"
+        if let date = formatter.date(from: dateStr) {
+            return Calendar.current.dateComponents([.hour, .minute], from: date)
+        }
+
+        // Fallback: return empty components (will fire immediately)
+        printStderr("Warning: Could not parse date '\(dateStr)'. Notification may fire immediately.")
+        return DateComponents()
     }
 
     private func outputAndExit(event: ActivationEvent) {
