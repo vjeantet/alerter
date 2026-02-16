@@ -23,9 +23,18 @@ let package = Package(
                 .product(name: "ArgumentParser", package: "swift-argument-parser"),
             ],
             path: "Sources/Alerter",
+            exclude: ["Info.plist"],
             swiftSettings: [
                 .swiftLanguageMode(.v5),
                 .unsafeFlags(["-suppress-warnings"]),
+            ],
+            linkerSettings: [
+                .unsafeFlags([
+                    "-Xlinker", "-sectcreate",
+                    "-Xlinker", "__TEXT",
+                    "-Xlinker", "__info_plist",
+                    "-Xlinker", "Sources/Alerter/Info.plist",
+                ]),
             ]
         ),
     ]
