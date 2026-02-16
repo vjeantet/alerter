@@ -17,7 +17,6 @@ struct NotificationConfig {
     let outputJSON: Bool
     let ignoreDnD: Bool
     let uuid: String
-    let interruptionLevel: String?
     let delay: Double?
     let scheduledDateString: String?
     let repeats: Bool
@@ -184,7 +183,7 @@ class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
             printStderr("Warning: --appIcon is not supported with UNUserNotificationCenter (no public API equivalent). Ignored.")
         }
         if config.ignoreDnD {
-            printStderr("Warning: --ignoreDnd is not supported with UNUserNotificationCenter. Use --interruption-level timeSensitive instead.")
+            printStderr("Warning: --ignoreDnd is not supported with UNUserNotificationCenter. Ignored.")
         }
         if let _ = config.dropdownLabel {
             printStderr("Warning: --dropdownLabel is not supported with UNUserNotificationCenter. Actions will be shown as flat buttons.")
@@ -193,15 +192,6 @@ class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
             printStderr("Warning: macOS limits notification actions to \(kMaxActions). Extra actions will be ignored.")
         }
 
-        // Interruption level
-        if let level = config.interruptionLevel {
-            switch level {
-            case "passive": content.interruptionLevel = .passive
-            case "timeSensitive": content.interruptionLevel = .timeSensitive
-            case "critical": content.interruptionLevel = .critical
-            default: content.interruptionLevel = .active
-            }
-        }
 
         // Build trigger (delay, at, or immediate)
         let trigger: UNNotificationTrigger?

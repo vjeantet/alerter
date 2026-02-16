@@ -69,9 +69,6 @@ struct AlerterCommand: ParsableCommand {
     @Flag(help: "Send notification even if Do Not Disturb is enabled.")
     var ignoreDnd: Bool = false
 
-    @Option(help: "Interruption level: passive, active (default), timeSensitive, or critical.")
-    var interruptionLevel: String?
-
     @Option(help: "Deliver notification after N seconds.")
     var delay: Double?
 
@@ -108,13 +105,6 @@ struct AlerterCommand: ParsableCommand {
             throw ValidationError("At least one of --message, --remove, or --list is required.")
         }
 
-        // --interruption-level validation
-        if let level = interruptionLevel {
-            let valid = ["passive", "active", "timeSensitive", "critical"]
-            if !valid.contains(level) {
-                throw ValidationError("Invalid --interruption-level '\(level)'. Must be one of: \(valid.joined(separator: ", ")).")
-            }
-        }
 
         // --delay / --at mutual exclusivity
         if delay != nil && at != nil {
@@ -221,7 +211,6 @@ struct AlerterCommand: ParsableCommand {
                 outputJSON: json,
                 ignoreDnD: ignoreDnd,
                 uuid: "\(NSApplication.shared.hash)",
-                interruptionLevel: interruptionLevel,
                 delay: delay,
                 scheduledDateString: at,
                 repeats: `repeat`

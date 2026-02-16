@@ -24,8 +24,6 @@ Displays a notification with one or more action buttons to click on.
 * Capture text typed by the user in reply-type alerts.
 * Timeout: automatically close the alert after a delay.
 * Schedule notifications with a delay or at a specific time, with optional repeat.
-* Set the interruption level (passive, active, timeSensitive, critical).
-* Add SF Symbol icons to action buttons.
 * Customize the close button label.
 * Customize the actions dropdown label.
 * Play a sound when delivering the notification.
@@ -119,11 +117,6 @@ Schedule a daily reminder
 ./alerter --message "Stand up!" --at "09:00" --repeat
 ```
 
-Time-sensitive notification (bypasses Focus/DND)
-```
-./alerter --message "Server is down!" --interruption-level timeSensitive
-```
-
 ## Options
 
 At a minimum, you must specify either `--message`, `--remove`, or `--list`.
@@ -212,18 +205,6 @@ The process stays alive and waits for user interaction with the first occurrence
 
 -------------------------------------------------------------------------------
 
-`--interruption-level VALUE`
-
-The interruption level of the notification. Possible values:
-* `passive` — delivered silently, no sound or screen wake.
-* `active` — default behavior.
-* `timeSensitive` — delivered even during Focus/Do Not Disturb.
-* `critical` — always delivered, even with the ringer switch off (requires entitlement).
-
-Requires macOS 12.0 or later.
-
--------------------------------------------------------------------------------
-
 `--sound NAME`
 
 The name of a sound to play when the notification appears. The names are listed
@@ -297,7 +278,7 @@ The path or URL of an image attached to the notification.
 
 Sends the notification even if Do Not Disturb is enabled.
 
-**Deprecated: Use `--interruption-level timeSensitive` instead. This option is ignored.**
+**Deprecated: This option is not supported with UNUserNotificationCenter and is ignored.**
 
 -------------------------------------------------------------------------------
 
