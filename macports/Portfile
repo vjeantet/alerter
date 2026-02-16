@@ -20,7 +20,7 @@ supported_archs     arm64 x86_64
 
 master_sites        https://github.com/vjeantet/alerter/releases/download/v${version}/
 distfiles           alerter-${version}.zip
-checksums           sha256 PLACEHOLDER_SHA256
+checksums           sha256 6f83c15220b984376572bde8095c16efa84b2efa1497ec71055373460f622024
 
 extract.mkdir       yes
 use_configure       no
