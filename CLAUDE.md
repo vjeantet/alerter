@@ -65,8 +65,10 @@ The version is determined automatically by `release.sh` based on existing git ta
 ```
 1. ./scripts/release.sh                    # bump version, build, sign, notarize, tag, GitHub Release
 2. ./scripts/update-homebrew-formula.sh     # update formula in vjeantet/homebrew-tap
+3. ./scripts/update-macports-portfile.sh    # update local macports/Portfile, then submit PR to macports-ports
 ```
 
 - `release.sh` auto-bumps the version in `AlerterCommand.swift`, commits, then builds, signs, notarizes (.zip + .pkg), creates a git tag `v$VERSION`, and publishes a GitHub Release with both assets.
 - `update-homebrew-formula.sh` computes the SHA256 of the .zip, clones `vjeantet/homebrew-tap`, updates `Formula/alerter.rb`, and pushes.
+- `update-macports-portfile.sh` computes the SHA256 of the .zip and updates `macports/Portfile` in-place. The updated Portfile can then be submitted as a PR to [macports/macports-ports](https://github.com/macports/macports-ports) under `sysutils/alerter/Portfile`.
 - Homebrew tap: `vjeantet/homebrew-tap` — users install via `brew install vjeantet/tap/alerter`.

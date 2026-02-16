@@ -38,6 +38,12 @@ Displays a notification with one or more action buttons to click on.
 brew install vjeantet/tap/alerter
 ```
 
+### MacPorts
+
+```bash
+sudo port install alerter
+```
+
 ### Manual
 
 1. Download the zipped precompiled binary from the
@@ -61,6 +67,7 @@ Versioning uses the format `YY.N` (e.g. `26.1`, `26.2`). The version is bumped a
 ```
 1. ./scripts/release.sh                    # bump version, build, sign, notarize, tag, GitHub Release
 2. ./scripts/update-homebrew-formula.sh     # update formula in vjeantet/homebrew-tap
+3. ./scripts/update-macports-portfile.sh    # update local macports/Portfile, then submit PR to macports-ports
 ```
 
 ## Usage
