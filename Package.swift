@@ -24,6 +24,9 @@ let package = Package(
             ],
             path: "Sources/Alerter",
             exclude: ["Info.plist"],
+            resources: [
+                .copy("Resources/AppIcon.icns"),
+            ],
             swiftSettings: [
                 .swiftLanguageMode(.v5),
                 .unsafeFlags(["-suppress-warnings"]),

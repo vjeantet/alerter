@@ -4,6 +4,8 @@
 <dict>
 	<key>CFBundleIdentifier</key>
 	<string>fr.vjeantet.alerter</string>
+	<key>CFBundleIconFile</key>
+	<string>AppIcon</string>
 	<key>NSUserNotificationAlertStyle</key>
 	<string>alert</string>
 </dict>
