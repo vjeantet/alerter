@@ -21,7 +21,6 @@ struct NotificationConfig {
     let delay: Double?
     let scheduledDateString: String?
     let repeats: Bool
-    let actionIcons: [String]?
 }
 
 private let kCategoryIdentifier = "ALERTER_CATEGORY"
@@ -442,16 +441,10 @@ class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
             // Button actions (max kMaxActions)
             let limit = min(actionTitles.count, kMaxActions)
             for i in 0..<limit {
-                let icon: UNNotificationActionIcon? = if let icons = config.actionIcons, i < icons.count {
-                    UNNotificationActionIcon(systemImageName: icons[i])
-                } else {
-                    nil
-                }
                 let action = UNNotificationAction(
                     identifier: "ACTION_\(i)",
                     title: actionTitles[i],
-                    options: [],
-                    icon: icon
+                    options: []
                 )
                 actions.append(action)
             }

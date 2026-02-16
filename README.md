@@ -124,11 +124,6 @@ Time-sensitive notification (bypasses Focus/DND)
 ./alerter --message "Server is down!" --interruption-level timeSensitive
 ```
 
-Action buttons with SF Symbol icons
-```
-./alerter --message "Deploy now?" --actions "Accept,Reject" --action-icons "checkmark.circle,xmark.circle"
-```
-
 ## Options
 
 At a minimum, you must specify either `--message`, `--remove`, or `--list`.
@@ -226,16 +221,6 @@ The interruption level of the notification. Possible values:
 * `critical` — always delivered, even with the ringer switch off (requires entitlement).
 
 Requires macOS 12.0 or later.
-
--------------------------------------------------------------------------------
-
-`--action-icons VALUE1,VALUE2,...`
-
-Comma-separated [SF Symbol](https://developer.apple.com/sf-symbols/) names to display as icons on action buttons.
-Icons are matched by position with `--actions` values. If fewer icons than actions are provided, the remaining actions have no icon.
-Requires `--actions`.
-
-Example: `--actions "Accept,Reject" --action-icons "checkmark.circle,xmark.circle"`
 
 -------------------------------------------------------------------------------
 

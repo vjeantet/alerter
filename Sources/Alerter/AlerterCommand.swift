@@ -81,9 +81,6 @@ struct AlerterCommand: ParsableCommand {
     @Flag(help: "Repeat the notification (requires --delay >= 60 or --at).")
     var `repeat`: Bool = false
 
-    @Option(help: "Comma-separated SF Symbol names for action icons (matched by position with --actions).")
-    var actionIcons: String?
-
     // Internal flag: request notification authorization and exit (launched via `open`)
     @Flag(name: .long, help: .hidden)
     var authorizeNotifications: Bool = false
@@ -139,10 +136,6 @@ struct AlerterCommand: ParsableCommand {
             throw ValidationError("--repeat with --delay requires a delay of at least 60 seconds.")
         }
 
-        // --action-icons requires --actions
-        if actionIcons != nil && actions == nil {
-            throw ValidationError("--action-icons requires --actions.")
-        }
     }
 
     func run() throws {
@@ -231,8 +224,7 @@ struct AlerterCommand: ParsableCommand {
                 interruptionLevel: interruptionLevel,
                 delay: delay,
                 scheduledDateString: at,
-                repeats: `repeat`,
-                actionIcons: actionIcons?.components(separatedBy: ",")
+                repeats: `repeat`
             )
 
             // Set activation policy for notification display
