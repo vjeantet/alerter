@@ -101,7 +101,7 @@ echo "==> Creating GitHub Release $TAG..."
 gh release create "$TAG" \
     "$ZIP_FILE" \
     "$PKG_FILE" \
-    --title "$PRODUCT_NAME $VERSION" \
+    --title "$VERSION" \
     --generate-notes
 
 # Display SHA256 for Homebrew formula
