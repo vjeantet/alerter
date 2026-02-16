@@ -359,7 +359,7 @@ class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
                 let action = UNNotificationAction(
                     identifier: "ACTION_\(i)",
                     title: actionTitles[i],
-                    options: [.foreground]
+                    options: []
                 )
                 actions.append(action)
             }
@@ -416,7 +416,11 @@ class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
     private func outputAndExit(event: ActivationEvent) {
         let output = OutputFormatter.format(event: event, asJSON: currentConfig?.outputJSON ?? false)
         print(output, terminator: "")
-        exit(0)
+        // Delay exit to let macOS finish processing the notification action,
+        // otherwise Finder shows "The application is not open anymore" dialog.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            exit(0)
+        }
     }
 
     func printStderr(_ message: String) {

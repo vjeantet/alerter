@@ -1,5 +1,6 @@
 import ArgumentParser
 import AppKit
+import UserNotifications
 import BundleHook
 
 struct AlerterCommand: ParsableCommand {
@@ -142,6 +143,23 @@ struct AlerterCommand: ParsableCommand {
                 }
                 manager.printStderr("Notification permission not granted. Please run alerter from its .app bundle.")
                 throw ExitCode.failure
+            }
+
+            // Launched via `open` but not yet authorized: request authorization now.
+            // requestAuthorization() requires LaunchServices launch (which is our case here).
+            // The TCC dialog is system-level so it shows even with the main thread blocked.
+            if status != .authorized && status != .provisional && launchedByOpen {
+                let authSem = DispatchSemaphore(value: 0)
+                var authGranted = false
+                UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { granted, _ in
+                    authGranted = granted
+                    authSem.signal()
+                }
+                authSem.wait()
+                if !authGranted {
+                    manager.printStderr("Notification permission was denied. Enable in System Settings > Notifications > alerter.")
+                    throw ExitCode.failure
+                }
             }
 
             let config = NotificationConfig(
