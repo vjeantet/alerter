@@ -6,7 +6,7 @@ struct AlerterCommand: ParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "alerter",
         abstract: "A command-line tool to send macOS user notifications.",
-        version: "2.0.0"
+        version: "26.1"
     )
 
     // MARK: - Required (at least one)
