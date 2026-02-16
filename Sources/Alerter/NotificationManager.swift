@@ -57,6 +57,67 @@ class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
         NSApplication.shared.run()
     }
 
+    /// Set notification style to "Alerts" (stay on screen) instead of "Banners" (auto-dismiss).
+    /// UNUserNotificationCenter has no public API for this — must modify ncprefs.plist directly.
+    /// Call after first authorization grant so notifications persist until user interaction.
+    func setAlertStyle() {
+        guard let bundleID = Bundle.main.bundleIdentifier else { return }
+
+        let prefsURL = FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent("Library/Preferences/com.apple.ncprefs.plist")
+
+        // Retry: macOS may take a few seconds to write the ncprefs entry after authorization
+        for _ in 1...10 {
+            if trySetAlertStyle(bundleID: bundleID, prefsURL: prefsURL) {
+                return
+            }
+            Thread.sleep(forTimeInterval: 1.0)
+        }
+    }
+
+    private func trySetAlertStyle(bundleID: String, prefsURL: URL) -> Bool {
+        // Write directly to the plist file (same approach as the working Python script).
+        guard let plistData = try? Data(contentsOf: prefsURL),
+              var plist = try? PropertyListSerialization.propertyList(from: plistData, format: nil) as? [String: Any],
+              var apps = plist["apps"] as? [[String: Any]] else { return false }
+
+        var modified = false
+        for i in 0..<apps.count {
+            guard let id = apps[i]["bundle-id"] as? String, id == bundleID else { continue }
+            guard let flags = apps[i]["flags"] as? Int else { continue }
+
+            // Alert style is encoded in bits 3-4: 01=Banners, 10=Alerts
+            let newFlags = (flags & ~0x18) | 0x10
+            if newFlags != flags {
+                apps[i]["flags"] = newFlags
+                modified = true
+                // flags changed from Banners to Alerts
+            } else {
+                return true // Already Alerts
+            }
+        }
+
+        guard modified else { return false }
+
+        plist["apps"] = apps
+        if let data = try? PropertyListSerialization.data(fromPropertyList: plist, format: .binary, options: 0) {
+            try? data.write(to: prefsURL)
+        }
+
+        // Kill NotificationCenter to force reload (same as working Python script)
+        for daemon in ["NotificationCenter", "usernoted"] {
+            let killall = Process()
+            killall.executableURL = URL(fileURLWithPath: "/usr/bin/killall")
+            killall.arguments = [daemon]
+            killall.standardOutput = FileHandle.nullDevice
+            killall.standardError = FileHandle.nullDevice
+            try? killall.run()
+            killall.waitUntilExit()
+        }
+
+        return true
+    }
+
     // MARK: - Deliver (async, called from main queue after NSApp.run())
 
     func deliverNotification(config: NotificationConfig) {

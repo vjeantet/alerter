@@ -160,6 +160,8 @@ struct AlerterCommand: ParsableCommand {
                     manager.printStderr("Notification permission was denied. Enable in System Settings > Notifications > alerter.")
                     throw ExitCode.failure
                 }
+                // Switch from default Banners to Alerts (stay on screen until dismissed)
+                manager.setAlertStyle()
             }
 
             let config = NotificationConfig(

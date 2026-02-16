@@ -110,8 +110,6 @@ func ensureRunningFromAppBundle() {
             <string>APPL</string>
             <key>CFBundleIconFile</key>
             <string>AppIcon</string>
-            <key>NSUserNotificationAlertStyle</key>
-            <string>alert</string>
             <key>LSUIElement</key>
             <true/>
         </dict>
