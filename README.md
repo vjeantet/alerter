@@ -1,7 +1,4 @@
 # Alerter
-<p align="center">
-    <a href="LICENSE.md"><img src="https://badgen.net/github/license/vjeantet/alerter"/></a>
-</p>
 
 Alerter is a command-line tool for sending macOS notifications (alerts), built with Swift and Swift Package Manager.
 The program exits when the user interacts with the alert or when it is dismissed, printing the result to stdout as plain text or JSON.
@@ -9,6 +6,12 @@ The program exits when the user interacts with the alert or when it is dismissed
 Alerts are macOS notifications that stay on screen until dismissed. Requires macOS 13.0 or later.
 
 Two kinds of alerts can be triggered: **Reply Alert** and **Actions Alert**.
+
+> [!IMPORTANT]
+> **Version 26.xxx** — Alerter has been completely rewritten in Swift with the Swift Package Manager. \
+> The CLI syntax now uses double dashes (--message, --title, --json...) and installation is done via Homebrew: `brew install vjeantet/tap/alerter`. \
+> See the [release notes](docs/release-notes-26.2.md) for all the details.
+
 
 ## Reply alert
 Displays a notification with a "Reply" button that opens a text input field.
