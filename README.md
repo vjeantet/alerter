@@ -22,6 +22,7 @@ Displays a notification with one or more action buttons to click on.
 ## Features
 * Set the alert icon, title, subtitle, and image.
 * Capture text typed by the user in reply-type alerts.
+* Delay: defer notification delivery by a given number of seconds.
 * Timeout: automatically close the alert after a delay.
 * Customize the close button label.
 * Customize the actions dropdown label.
@@ -159,6 +160,14 @@ The title of the notification. Defaults to 'Terminal'.
 `--subtitle VALUE`
 
 The subtitle of the notification.
+
+-------------------------------------------------------------------------------
+
+`--delay NUMBER`
+
+Wait NUMBER seconds before delivering the notification. Defaults to 0 (immediate delivery).
+If a signal (SIGINT/SIGTERM) is received during the delay, the process exits silently without delivering.
+When combined with `--timeout`, the timeout starts after the notification is delivered.
 
 -------------------------------------------------------------------------------
 

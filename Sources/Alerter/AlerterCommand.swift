@@ -65,6 +65,9 @@ struct AlerterCommand: ParsableCommand {
     @Flag(help: "Output result as JSON.")
     var json: Bool = false
 
+    @Option(help: "Deliver the notification after N seconds.")
+    var delay: Int = 0
+
     @Flag(help: "Send notification even if Do Not Disturb is enabled.")
     var ignoreDnd: Bool = false
 
@@ -82,6 +85,10 @@ struct AlerterCommand: ParsableCommand {
 
         if message == nil && remove == nil && list == nil {
             throw ValidationError("At least one of --message, --remove, or --list is required.")
+        }
+
+        if delay < 0 {
+            throw ValidationError("--delay must be a non-negative integer.")
         }
     }
 
@@ -101,6 +108,11 @@ struct AlerterCommand: ParsableCommand {
             if message == nil {
                 throw ExitCode.success
             }
+        }
+
+        // Delay delivery if requested
+        if delay > 0 {
+            Thread.sleep(forTimeInterval: Double(delay))
         }
 
         // Deliver notification
