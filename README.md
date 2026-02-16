@@ -1,32 +1,31 @@
 # Alerter
-
 <p align="center">
-    <a href="LICENSE.md"><img src="https://badgen.net/github/license/vjeantet/alerter" /></a>
+    <a href="LICENSE.md"><img src="https://badgen.net/github/license/vjeantet/alerter"/></a>
 </p>
 
-alerter is a command-line tool to send Mac OS X User Alerts (Notifications),
-which are available in Mac OS X 10.8 and higher. (even catalina)
-the program ends when the alerter is activated or closed, writing the activated value to output (stdout), or a json object to describe the alert event.
+Alerter is a command-line tool for sending macOS notifications (alerts), built with Swift and Swift Package Manager.
+The program exits when the user interacts with the alert or when it is dismissed, printing the result to stdout as plain text or JSON.
 
-Alerts are OS X notifications that stay on screen unless dismissed.
+Alerts are macOS notifications that stay on screen until dismissed. Requires macOS 13.0 or later.
 
-2 kinds of alert notification can be triggered : "Reply Alert" or "Actions Alert"
+Two kinds of alerts can be triggered: **Reply Alert** and **Actions Alert**.
 
 ## Reply alert
-Open a notification in the top-right corner of your screen and display a "Reply" button, which opens a text input.
+Displays a notification with a "Reply" button that opens a text input field.
 
 ## Actions alert
-Open a notification in the top-right corner of your screen and display one or more actions to click on.
+Displays a notification with one or more action buttons to click on.
 
 ## Features
-* set alert's icon, title, subtitle, image.
-* capture text typed by user in the reply type alert.
-* timeout : automatically close the alert notification after a delay.
-* change the close button label.
-* change the actions dropdown label.
-* play a sound while delivering the alert notification.
-* value or json output on alert's event (closed, timeout, replied, activated...)
-* close the alert notification on SIGINT, SIGTERM.
+* Set the alert icon, title, subtitle, and image.
+* Capture text typed by the user in reply-type alerts.
+* Timeout: automatically close the alert after a delay.
+* Customize the close button label.
+* Customize the actions dropdown label.
+* Play a sound when delivering the notification.
+* Plain text or JSON output for alert events (closed, timeout, replied, activated, etc.).
+* Ignore Do Not Disturb mode.
+* Gracefully close the notification on SIGINT and SIGTERM.
 
 ## Installation
 
@@ -43,6 +42,15 @@ brew install vjeantet/tap/alerter
 2. Extract the binary.
 3. Place it in a directory listed in your `$PATH` (e.g. `/usr/local/bin`).
 
+### Build from source
+
+```bash
+git clone https://github.com/vjeantet/alerter.git
+cd alerter
+swift build -c release
+# Binary is at .build/release/alerter
+```
+
 ## Release workflow
 
 Versioning uses the format `YY.N` (e.g. `26.1`, `26.2`). The version is bumped automatically.
@@ -55,48 +63,47 @@ Versioning uses the format `YY.N` (e.g. `26.1`, `26.2`). The version is bumped a
 ## Usage
 
 ```
-$ ./alerter -[message|group|list] [VALUE|ID|ID] [options]
+$ ./alerter --message|--group|--list [VALUE|ID|ID] [options]
 ```
 
-Some examples are:
+Examples:
 
 Display piped data with a sound
 
 ```
-$ echo 'Piped Message Data!' | alerter -sound default
+$ echo 'Piped Message Data!' | alerter --sound default
 ```
 
 ![Display piped data with a sound](/img1.png?raw=true "")
 
 Multiple actions and custom dropdown list
 ```
-./alerter -message "Deploy now on UAT ?" -actions Now,"Later today","Tomorrow" -dropdownLabel "When ?"
+./alerter --message "Deploy now on UAT ?" --actions "Now,Later today,Tomorrow" --dropdownLabel "When ?"
 ```
 
 ![Multiple actions and custom dropdown list](/img2.png?raw=true "")
 
-Yes or No ?
+Yes or No?
 ```
-./alerter -title ProjectX -subtitle "new tag detected" -message "Deploy now on UAT ?" -closeLabel No -actions Yes -appIcon http://vjeantet.fr/images/logo.png
+./alerter --title ProjectX --subtitle "new tag detected" --message "Deploy now on UAT ?" --closeLabel No --actions Yes --appIcon http://vjeantet.fr/images/logo.png
 ```
 
 ![Yes or No](/img3.png?raw=true "")
 
-What is the name of this release ?
+What is the name of this release?
 ```
-./alerter -reply -message "What is the name of this release ?" -title "Deploy in progress..."
+./alerter --reply "Type release name" --message "What is the name of this release?" --title "Deploy in progress..."
 ```
 
 ![What is the name of this release](/img4.png?raw=true "")
 
 ## Options
 
-At a minimum, you have to specify either the `-message` , the `-remove`
-or the `-list` option.
+At a minimum, you must specify either `--message`, `--remove`, or `--list`.
 
 -------------------------------------------------------------------------------
 
-`-message VALUE`  **[required]**
+`--message VALUE`  **[required]**
 
 The message body of the notification.
 
@@ -105,132 +112,135 @@ data will be used instead.
 
 -------------------------------------------------------------------------------
 
-`-reply`
+`--reply TEXT`
 
-The notification will be displayed as a reply type alert.
-
--------------------------------------------------------------------------------
-
-`-actions VALUE1,VALUE2,"VALUE 3"`
-
-The notification actions available.
-When you provide more than one value, a dropdown will be displayed.
-You can customize this dropdown label with the next option.
-Does not work when -reply is used.
+Displays the notification as a reply-type alert. TEXT is used as placeholder text in the input field.
 
 -------------------------------------------------------------------------------
 
-`-dropdownLabel VALUE`
+`--actions VALUE1,VALUE2,"VALUE 3"`
 
-The notification actions dropdown title (only when multiples -actions values are provided).
-Does not work when -reply is used.
-
--------------------------------------------------------------------------------
-
-`-closeLabel VALUE`
-
-The notification "Close" button label.
+The available notification actions.
+When more than one value is provided, a dropdown is displayed.
+You can customize the dropdown label with the `--dropdownLabel` option.
+Cannot be combined with `--reply`.
 
 -------------------------------------------------------------------------------
 
-`-title VALUE`
+`--dropdownLabel VALUE`
 
-The title of the notification. This defaults to ‘Terminal’.
+The label for the actions dropdown (only used when multiple `--actions` values are provided).
+Cannot be combined with `--reply`.
 
 -------------------------------------------------------------------------------
 
-`-subtitle VALUE`
+`--closeLabel VALUE`
+
+A custom label for the notification's "Close" button.
+
+-------------------------------------------------------------------------------
+
+`--title VALUE`
+
+The title of the notification. Defaults to 'Terminal'.
+
+-------------------------------------------------------------------------------
+
+`--subtitle VALUE`
 
 The subtitle of the notification.
 
 -------------------------------------------------------------------------------
 
-`-timeout NUMBER`
+`--timeout NUMBER`
 
-Auto close the alert notification after NUMBER seconds.
+Automatically close the notification after NUMBER seconds. Defaults to 0 (no timeout).
 
 -------------------------------------------------------------------------------
 
-`-sound NAME`
+`--sound NAME`
 
 The name of a sound to play when the notification appears. The names are listed
 in Sound Preferences. Use 'default' for the default notification sound.
 
 -------------------------------------------------------------------------------
 
-`-json`
+`--json`
 
-Alerter will output a json struct to describe what happened to the alert.
+Output the result as a JSON object describing the alert event.
 
 -------------------------------------------------------------------------------
 
-`-group ID`
+`--group ID`
 
-Specifies the ‘group’ a notification belongs to. For any ‘group’ only _one_
+Specifies the 'group' a notification belongs to. For any 'group' only _one_
 notification will ever be shown, replacing previously posted notifications.
 
-A notification can be explicitly removed with the `-remove` option, described
+A notification can be explicitly removed with the `--remove` option, described
 below.
 
-Examples are:
+Examples:
 
-* The sender’s name to scope the notifications by tool.
-* The sender’s process ID to scope the notifications by a unique process.
-* The current working directory to scope notifications by project.
-
--------------------------------------------------------------------------------
-
-`-remove ID`  **[required]**
-
-Removes a notification that was previously sent with the specified ‘group’ ID,
-if one exists. If used with the special group "ALL", all message are removed.
+* The sender's name, to scope notifications by tool.
+* The sender's process ID, to scope notifications by process.
+* The current working directory, to scope notifications by project.
 
 -------------------------------------------------------------------------------
 
-`-list ID` **[required]**
+`--remove ID`  **[required]**
 
-Lists details about the specified ‘group’ ID. If used with the special group
-"ALL", details about all currently active  messages are displayed.
-
-The output of this command is a json array of alert notifications.
+Removes a previously sent notification with the specified 'group' ID,
+if one exists. Use the special group "ALL" to remove all notifications.
 
 -------------------------------------------------------------------------------
 
-`-sender ID`
+`--list ID` **[required]**
 
-Specifying this will make it appear as if the notification was send by that
-application instead, including using its icon.
+Lists details about the specified 'group' ID. Use the special group
+"ALL" to list all currently active notifications.
 
-Using this option fakes the sender application, so that the notification system
-will launch that application when the notification is clicked. Because of this
-it is important to note that you cannot combine this with options like
-`-execute`, `-open`, and `-activate` which depend on the sender of the
-notification to be ‘alerter’ to perform its work.
-
-For information on the `ID` see the `-activate` option.
+Output is a JSON array of notifications.
 
 -------------------------------------------------------------------------------
 
-`-appIcon PATH` **[10.9+ only]**
+`--sender ID`
 
-Specifies The PATH or URL of an image to display instead of the application icon.
+Makes the notification appear as if it was sent by the specified application,
+including using its icon. Defaults to `fr.vjeantet.alerter`.
 
-**WARNING: This option is subject to change since it relies on a private method.**
-
--------------------------------------------------------------------------------
-
-`-contentImage PATH` **[10.9+ only]**
-
-Specifies The PATH or URL of an image to display attached inside the notification.
-
-**WARNING: This option is subject to change since it relies on a private method.**
+When this option is used, clicking the notification will launch the impersonated
+application instead of alerter.
 
 -------------------------------------------------------------------------------
 
+`--appIcon PATH`
 
-## Example usage with shell script
+The path or URL of an image to display instead of the application icon.
+
+**WARNING: This option relies on a private API and may break in future macOS releases.**
+
+-------------------------------------------------------------------------------
+
+`--contentImage PATH`
+
+The path or URL of an image to display inside the notification.
+
+**WARNING: This option relies on a private API and may break in future macOS releases.**
+
+-------------------------------------------------------------------------------
+
+`--ignoreDnd`
+
+Sends the notification even if Do Not Disturb is enabled.
+
+**WARNING: This option relies on a private API and may break in future macOS releases.**
+
+-------------------------------------------------------------------------------
+
+
+## Shell script example
 ```bash
-ANSWER="$(./alerter -message 'Start now ?' -closeLabel No -actions YES,MAYBE,'one more action' -timeout 10)"
+ANSWER="$(./alerter --message 'Start now ?' --closeLabel No --actions 'YES,MAYBE,one more action' --timeout 10)"
 case $ANSWER in
     "@TIMEOUT") echo "Timeout man, sorry" ;;
     "@CLOSED") echo "You clicked on the default alert' close button" ;;
@@ -253,9 +263,9 @@ This project is based on a fork of [terminal notifier](https://github.com/julien
 
 ## License
 
-All the works are available under the MIT license.
+All work is available under the MIT license.
 
-Copyright (C) 2012-2023 Valère Jeantet <valere.jeantet@gmail.com>, Eloy Durán <eloy.de.enige@gmail.com>, Julien Blanchard
+Copyright (C) 2012-2026 Valère Jeantet <valere.jeantet@gmail.com>, Eloy Durán <eloy.de.enige@gmail.com>, Julien Blanchard
 <julien@sideburns.eu>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of
