@@ -21,6 +21,7 @@ struct NotificationConfig {
 
 private let kCategoryIdentifier = "ALERTER_CATEGORY"
 private let kReplyActionIdentifier = "REPLY_ACTION"
+private let kCloseActionIdentifier = "CLOSE_ACTION"
 private let kMaxActions = 4
 
 class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
@@ -277,6 +278,16 @@ class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
                 activatedAt: Date()
             )
 
+        case kCloseActionIdentifier:
+            let closeLabel = info["closeLabel"] as? String
+            event = ActivationEvent(
+                type: .closed,
+                value: closeLabel,
+                valueIndex: nil,
+                deliveredAt: deliveryDate,
+                activatedAt: Date()
+            )
+
         case UNNotificationDefaultActionIdentifier:
             event = ActivationEvent(
                 type: .contentsClicked,
@@ -352,6 +363,16 @@ class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
                 )
                 actions.append(action)
             }
+        }
+
+        // Close button (visible action that triggers a close event)
+        if let closeLabel = config.closeLabel, actions.count < kMaxActions {
+            let closeAction = UNNotificationAction(
+                identifier: kCloseActionIdentifier,
+                title: closeLabel,
+                options: []
+            )
+            actions.append(closeAction)
         }
 
         let category = UNNotificationCategory(
