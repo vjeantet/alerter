@@ -68,6 +68,9 @@ struct AlerterCommand: ParsableCommand {
     @Option(help: "Deliver the notification after N seconds.")
     var delay: Int = 0
 
+    @Option(help: "Deliver at a specific time. Formats: 'HH:mm' or 'yyyy-MM-dd HH:mm'.")
+    var at: String?
+
     @Flag(help: "Send notification even if Do Not Disturb is enabled.")
     var ignoreDnd: Bool = false
 
@@ -90,6 +93,19 @@ struct AlerterCommand: ParsableCommand {
         if delay < 0 {
             throw ValidationError("--delay must be a non-negative integer.")
         }
+
+        if at != nil && delay > 0 {
+            throw ValidationError("--at and --delay cannot be combined.")
+        }
+
+        if let atValue = at {
+            guard let targetDate = parseAtTime(atValue) else {
+                throw ValidationError("--at: invalid format. Use 'HH:mm' or 'yyyy-MM-dd HH:mm'.")
+            }
+            if targetDate.timeIntervalSinceNow < -60 {
+                throw ValidationError("--at: the specified time is in the past.")
+            }
+        }
     }
 
     func run() throws {
@@ -110,8 +126,13 @@ struct AlerterCommand: ParsableCommand {
             }
         }
 
-        // Delay delivery if requested
-        if delay > 0 {
+        // Wait until target time or delay
+        if let atValue = at, let targetDate = parseAtTime(atValue) {
+            let waitInterval = targetDate.timeIntervalSinceNow
+            if waitInterval > 0 {
+                Thread.sleep(forTimeInterval: waitInterval)
+            }
+        } else if delay > 0 {
             Thread.sleep(forTimeInterval: Double(delay))
         }
 
@@ -141,6 +162,42 @@ struct AlerterCommand: ParsableCommand {
             // Start the run loop to receive notification callbacks
             NSApplication.shared.run()
         }
+    }
+
+    private func parseAtTime(_ value: String) -> Date? {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = TimeZone.current
+
+        // Try yyyy-MM-dd HH:mm
+        formatter.dateFormat = "yyyy-MM-dd HH:mm"
+        if let date = formatter.date(from: value) {
+            return date
+        }
+
+        // Try HH:mm — next occurrence
+        formatter.dateFormat = "HH:mm"
+        if let time = formatter.date(from: value) {
+            let calendar = Calendar.current
+            let now = Date()
+            let components = calendar.dateComponents([.hour, .minute], from: time)
+            guard let todayAtTime = calendar.date(
+                bySettingHour: components.hour!, minute: components.minute!, second: 0, of: now
+            ) else {
+                return nil
+            }
+            // Compare at minute granularity: same minute or later = today
+            let nowMinute = calendar.date(
+                from: calendar.dateComponents([.year, .month, .day, .hour, .minute], from: now)
+            )!
+            if todayAtTime >= nowMinute {
+                return todayAtTime
+            }
+            // Otherwise, tomorrow
+            return calendar.date(byAdding: .day, value: 1, to: todayAtTime)
+        }
+
+        return nil
     }
 
     private func printError(_ message: String) {

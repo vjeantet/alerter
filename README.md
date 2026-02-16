@@ -23,6 +23,7 @@ Displays a notification with one or more action buttons to click on.
 * Set the alert icon, title, subtitle, and image.
 * Capture text typed by the user in reply-type alerts.
 * Delay: defer notification delivery by a given number of seconds.
+* Schedule: deliver a notification at a specific time (HH:mm or yyyy-MM-dd HH:mm).
 * Timeout: automatically close the alert after a delay.
 * Customize the close button label.
 * Customize the actions dropdown label.
@@ -168,6 +169,20 @@ The subtitle of the notification.
 Wait NUMBER seconds before delivering the notification. Defaults to 0 (immediate delivery).
 If a signal (SIGINT/SIGTERM) is received during the delay, the process exits silently without delivering.
 When combined with `--timeout`, the timeout starts after the notification is delivered.
+Cannot be combined with `--at`.
+
+-------------------------------------------------------------------------------
+
+`--at TIME`
+
+Deliver the notification at a specific time. Accepts two formats:
+- `HH:mm` — next occurrence of that time (e.g. `14:30`). If the time matches the current minute, delivers immediately; if it has already passed today, schedules for tomorrow.
+- `yyyy-MM-dd HH:mm` — a specific date and time (e.g. `2026-03-15 09:00`). Must be in the future.
+
+Times are interpreted in the system's local timezone.
+If a signal (SIGINT/SIGTERM) is received while waiting, the process exits silently without delivering.
+When combined with `--timeout`, the timeout starts after the notification is delivered.
+Cannot be combined with `--delay`.
 
 -------------------------------------------------------------------------------
 
