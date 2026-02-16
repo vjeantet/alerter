@@ -27,6 +27,8 @@ swift run alerter --message "Test message"
 .build/debug/alerter --remove mygroup
 .build/debug/alerter --message "Timeout" --timeout 3
 .build/debug/alerter --help
+echo "Piped" | .build/debug/alerter
+
 ```
 
 There are no automated tests. Testing is done manually by invoking the built binary.
