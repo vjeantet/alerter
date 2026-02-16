@@ -25,7 +25,6 @@ let package = Package(
             path: "Sources/Alerter",
             swiftSettings: [
                 .swiftLanguageMode(.v5),
-                .unsafeFlags(["-suppress-warnings"]),
             ]
         ),
     ]

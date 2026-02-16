@@ -1,4 +1,5 @@
 import AppKit
+import UserNotifications
 
 struct NotificationConfig {
     let title: String
@@ -18,92 +19,187 @@ struct NotificationConfig {
     let uuid: String
 }
 
-class NotificationManager: NSObject, NSUserNotificationCenterDelegate {
+private let kCategoryIdentifier = "ALERTER_CATEGORY"
+private let kReplyActionIdentifier = "REPLY_ACTION"
+private let kMaxActions = 4
+
+class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
     static let shared = NotificationManager()
 
-    private var currentNotification: NSUserNotification?
+    private var currentRequestIdentifier: String?
     private var currentConfig: NotificationConfig?
+    private var deliveryDate: Date?
 
-    // MARK: - Deliver
+    // MARK: - Authorization
+
+    /// Check authorization status synchronously (before NSApp.run()).
+    func getAuthorizationStatus() -> UNAuthorizationStatus {
+        let center = UNUserNotificationCenter.current()
+        let sem = DispatchSemaphore(value: 0)
+        var status: UNAuthorizationStatus = .notDetermined
+
+        center.getNotificationSettings { settings in
+            status = settings.authorizationStatus
+            sem.signal()
+        }
+        sem.wait()
+        return status
+    }
+
+    /// Request authorization. Called when launched via `open` (LaunchServices).
+    /// Uses NSApp.run() so the system auth dialog can appear.
+    func handleAuthorizationRequest() {
+        let center = UNUserNotificationCenter.current()
+        center.requestAuthorization(options: [.alert, .sound]) { _, _ in
+            exit(0)
+        }
+        NSApplication.shared.run()
+    }
+
+    // MARK: - Deliver (async, called from main queue after NSApp.run())
 
     func deliverNotification(config: NotificationConfig) {
         currentConfig = config
 
-        // Remove earlier notification with the same group ID
-        if let groupID = config.groupID {
-            removeNotification(groupID: groupID)
-        }
+        let center = UNUserNotificationCenter.current()
+        center.delegate = self
 
-        let notification = NSUserNotification()
-        notification.title = config.title
-        notification.subtitle = config.subtitle
-        notification.informativeText = config.message
+        // Remove earlier notification with the same group ID (async)
+        if let groupID = config.groupID {
+            removeNotificationAsync(groupID: groupID) {
+                self.buildAndDeliver(config: config, center: center)
+            }
+        } else {
+            buildAndDeliver(config: config, center: center)
+        }
+    }
+
+    private func buildAndDeliver(config: NotificationConfig, center: UNUserNotificationCenter) {
+        // Register category with actions
+        let categoryID = registerCategory(for: config)
+
+        // Build notification content
+        let content = UNMutableNotificationContent()
+        content.title = config.title
+        if let subtitle = config.subtitle {
+            content.subtitle = subtitle
+        }
+        content.body = config.message
+        content.categoryIdentifier = categoryID
 
         // Store config info in userInfo for callbacks
         var userInfo: [String: String] = ["uuid": config.uuid, "timeout": "\(config.timeout)"]
         if let groupID = config.groupID { userInfo["groupID"] = groupID }
         userInfo["output"] = config.outputJSON ? "json" : "outputEvent"
-        notification.userInfo = userInfo
+        if let closeLabel = config.closeLabel { userInfo["closeLabel"] = closeLabel }
+        content.userInfo = userInfo
 
-        // App icon (private API)
-        if let appIconPath = config.appIcon {
-            if let image = loadImage(from: appIconPath) {
-                notification.setValue(image, forKey: "_identityImage")
-                notification.setValue(false, forKey: "_identityImageHasBorder")
-            }
-        }
-
-        // Content image
-        if let contentImagePath = config.contentImage {
-            notification.contentImage = loadImage(from: contentImagePath)
-        }
-
-        // Actions
-        if let actions = config.actions, !actions.isEmpty {
-            notification.setValue(true, forKey: "_showsButtons")
-            if actions.count > 1 {
-                notification.setValue(true, forKey: "_alwaysShowAlternateActionMenu")
-                notification.setValue(actions, forKey: "_alternateActionButtonTitles")
-                if let dropdownLabel = config.dropdownLabel {
-                    notification.actionButtonTitle = dropdownLabel
-                    notification.hasActionButton = true
-                }
-            } else {
-                notification.actionButtonTitle = actions[0]
-            }
-        } else if config.replyPlaceholder != nil {
-            notification.setValue(true, forKey: "_showsButtons")
-            notification.hasReplyButton = true
-            notification.responsePlaceholder = config.replyPlaceholder
-        }
-
-        // Close button
-        if let closeLabel = config.closeLabel {
-            notification.otherButtonTitle = closeLabel
+        // Thread identifier (grouping)
+        if let groupID = config.groupID {
+            content.threadIdentifier = groupID
         }
 
         // Sound
         if let sound = config.sound {
-            notification.soundName = (sound == "default") ? NSUserNotificationDefaultSoundName : sound
+            content.sound = (sound == "default") ? .default : UNNotificationSound(named: UNNotificationSoundName(sound))
         }
 
-        // Ignore Do Not Disturb (private API)
+        // Content image (best-effort via attachment)
+        if let contentImagePath = config.contentImage {
+            if let attachment = createAttachment(from: contentImagePath) {
+                content.attachments = [attachment]
+            } else {
+                printStderr("Warning: --contentImage could not be attached. UNNotificationAttachment may not render images on macOS as expected.")
+            }
+        }
+
+        // Warnings for deprecated/unsupported features
+        if config.appIcon != nil {
+            printStderr("Warning: --appIcon is not supported with UNUserNotificationCenter (no public API equivalent). Ignored.")
+        }
         if config.ignoreDnD {
-            notification.setValue(true, forKey: "_ignoresDoNotDisturb")
+            printStderr("Warning: --ignoreDnd is not supported with UNUserNotificationCenter (no public API equivalent). Ignored.")
+        }
+        if let _ = config.dropdownLabel {
+            printStderr("Warning: --dropdownLabel is not supported with UNUserNotificationCenter. Actions will be shown as flat buttons.")
+        }
+        if let actions = config.actions, actions.count > kMaxActions {
+            printStderr("Warning: macOS limits notification actions to \(kMaxActions). Extra actions will be ignored.")
         }
 
-        let center = NSUserNotificationCenter.default
-        center.delegate = self
-        center.deliver(notification)
+        // Deliver immediately (nil trigger)
+        let requestIdentifier = config.uuid
+        let request = UNNotificationRequest(identifier: requestIdentifier, content: content, trigger: nil)
+
+        center.add(request) { error in
+            if let error = error {
+                self.printStderr("Failed to deliver notification: \(error.localizedDescription)")
+                exit(1)
+            }
+
+            self.currentRequestIdentifier = requestIdentifier
+            self.deliveryDate = Date()
+
+            // Timeout handler
+            if config.timeout > 0 {
+                DispatchQueue.global().asyncAfter(deadline: .now() + .seconds(config.timeout)) { [weak self] in
+                    center.removeDeliveredNotifications(withIdentifiers: [requestIdentifier])
+                    DispatchQueue.main.async {
+                        let event = ActivationEvent(
+                            type: .timeout,
+                            value: nil,
+                            valueIndex: nil,
+                            deliveredAt: self?.deliveryDate,
+                            activatedAt: Date()
+                        )
+                        self?.outputAndExit(event: event)
+                    }
+                }
+            }
+        }
     }
 
     // MARK: - Remove
 
     func removeNotification(groupID: String) {
-        let center = NSUserNotificationCenter.default
-        for notification in center.deliveredNotifications {
-            if groupID == "ALL" || notification.userInfo?["groupID"] as? String == groupID {
-                center.removeDeliveredNotification(notification)
+        let center = UNUserNotificationCenter.current()
+        let sem = DispatchSemaphore(value: 0)
+        var delivered: [UNNotification] = []
+
+        center.getDeliveredNotifications { notifications in
+            delivered = notifications
+            sem.signal()
+        }
+        sem.wait()
+
+        var idsToRemove: [String] = []
+        for notification in delivered {
+            let info = notification.request.content.userInfo
+            if groupID == "ALL" || (info["groupID"] as? String) == groupID {
+                idsToRemove.append(notification.request.identifier)
+            }
+        }
+
+        if !idsToRemove.isEmpty {
+            center.removeDeliveredNotifications(withIdentifiers: idsToRemove)
+        }
+    }
+
+    private func removeNotificationAsync(groupID: String, completion: @escaping () -> Void) {
+        let center = UNUserNotificationCenter.current()
+        center.getDeliveredNotifications { notifications in
+            var idsToRemove: [String] = []
+            for notification in notifications {
+                let info = notification.request.content.userInfo
+                if groupID == "ALL" || (info["groupID"] as? String) == groupID {
+                    idsToRemove.append(notification.request.identifier)
+                }
+            }
+            if !idsToRemove.isEmpty {
+                center.removeDeliveredNotifications(withIdentifiers: idsToRemove)
+            }
+            DispatchQueue.main.async {
+                completion()
             }
         }
     }
@@ -111,18 +207,28 @@ class NotificationManager: NSObject, NSUserNotificationCenterDelegate {
     // MARK: - List
 
     func listNotifications(groupID: String) {
-        let center = NSUserNotificationCenter.default
-        var results: [[String: String]] = []
+        let center = UNUserNotificationCenter.current()
+        let sem = DispatchSemaphore(value: 0)
+        var delivered: [UNNotification] = []
 
-        for notification in center.deliveredNotifications {
-            let deliveredGroupID = notification.userInfo?["groupID"] as? String
+        center.getDeliveredNotifications { notifications in
+            delivered = notifications
+            sem.signal()
+        }
+        sem.wait()
+
+        var results: [[String: String]] = []
+        for notification in delivered {
+            let content = notification.request.content
+            let info = content.userInfo
+            let deliveredGroupID = info["groupID"] as? String
             if groupID == "ALL" || deliveredGroupID == groupID {
                 var entry: [String: String] = [:]
                 entry["GroupID"] = deliveredGroupID
-                entry["Title"] = notification.title
-                entry["subtitle"] = notification.subtitle
-                entry["message"] = notification.informativeText
-                entry["deliveredAt"] = notification.actualDeliveryDate?.description
+                entry["Title"] = content.title
+                entry["subtitle"] = content.subtitle
+                entry["message"] = content.body
+                entry["deliveredAt"] = notification.date.description
                 results.append(entry)
             }
         }
@@ -137,135 +243,154 @@ class NotificationManager: NSObject, NSUserNotificationCenterDelegate {
     // MARK: - Cleanup
 
     func bye() {
-        guard let uuid = currentNotification?.userInfo?["uuid"] as? String else { return }
-        let center = NSUserNotificationCenter.default
-        for notification in center.deliveredNotifications {
-            if notification.userInfo?["uuid"] as? String == uuid {
-                center.removeDeliveredNotification(notification)
-            }
-        }
+        guard let identifier = currentRequestIdentifier else { return }
+        UNUserNotificationCenter.current().removeDeliveredNotifications(withIdentifiers: [identifier])
     }
 
-    // MARK: - NSUserNotificationCenterDelegate
+    // MARK: - UNUserNotificationCenterDelegate
 
-    func userNotificationCenter(_ center: NSUserNotificationCenter,
-                                shouldPresent notification: NSUserNotification) -> Bool {
-        return true
+    func userNotificationCenter(_ center: UNUserNotificationCenter,
+                                willPresent notification: UNNotification,
+                                withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
+        completionHandler([.banner, .sound])
     }
 
-    func userNotificationCenter(_ center: NSUserNotificationCenter,
-                                didDeliver notification: NSUserNotification) {
-        currentNotification = notification
-
-        // Poll for notification dismissal (closed by user)
-        let uuid = currentConfig?.uuid ?? ""
-        DispatchQueue.global().async { [weak self] in
-            while true {
-                var stillPresent = false
-                for n in NSUserNotificationCenter.default.deliveredNotifications {
-                    if n.userInfo?["uuid"] as? String == uuid {
-                        stillPresent = true
-                    }
-                }
-                if !stillPresent {
-                    DispatchQueue.main.async {
-                        let event = ActivationEvent(
-                            type: .closed,
-                            value: notification.otherButtonTitle,
-                            valueIndex: nil,
-                            deliveredAt: notification.actualDeliveryDate,
-                            activatedAt: Date()
-                        )
-                        self?.outputAndExit(event: event)
-                    }
-                    return
-                }
-                Thread.sleep(forTimeInterval: 0.2)
-            }
+    func userNotificationCenter(_ center: UNUserNotificationCenter,
+                                didReceive response: UNNotificationResponse,
+                                withCompletionHandler completionHandler: @escaping () -> Void) {
+        let info = response.notification.request.content.userInfo
+        guard info["uuid"] as? String == currentConfig?.uuid else {
+            completionHandler()
+            return
         }
-
-        // Timeout handler
-        if let config = currentConfig, config.timeout > 0 {
-            DispatchQueue.global().asyncAfter(deadline: .now() + .seconds(config.timeout)) { [weak self] in
-                center.removeDeliveredNotification(notification)
-                let event = ActivationEvent(
-                    type: .timeout,
-                    value: nil,
-                    valueIndex: nil,
-                    deliveredAt: notification.actualDeliveryDate,
-                    activatedAt: Date()
-                )
-                self?.outputAndExit(event: event)
-            }
-        }
-    }
-
-    func userNotificationCenter(_ center: NSUserNotificationCenter,
-                                didActivate notification: NSUserNotification) {
-        guard notification.userInfo?["uuid"] as? String == currentConfig?.uuid else { return }
 
         let event: ActivationEvent
 
-        switch notification.activationType {
-        case .additionalActionClicked, .actionButtonClicked:
-            let alternateTitles = (notification as NSObject).value(forKey: "_alternateActionButtonTitles") as? [String]
-            if let titles = alternateTitles, titles.count > 1 {
-                let index = ((notification as NSObject).value(forKey: "_alternateActionIndex") as? NSNumber)?.intValue ?? 0
-                event = ActivationEvent(
-                    type: .actionClicked,
-                    value: titles[index],
-                    valueIndex: index,
-                    deliveredAt: notification.actualDeliveryDate,
-                    activatedAt: Date()
-                )
-            } else {
-                event = ActivationEvent(
-                    type: .actionClicked,
-                    value: notification.actionButtonTitle,
-                    valueIndex: nil,
-                    deliveredAt: notification.actualDeliveryDate,
-                    activatedAt: Date()
-                )
-            }
+        switch response.actionIdentifier {
+        case UNNotificationDismissActionIdentifier:
+            let closeLabel = info["closeLabel"] as? String
+            event = ActivationEvent(
+                type: .closed,
+                value: closeLabel,
+                valueIndex: nil,
+                deliveredAt: deliveryDate,
+                activatedAt: Date()
+            )
 
-        case .contentsClicked:
+        case UNNotificationDefaultActionIdentifier:
             event = ActivationEvent(
                 type: .contentsClicked,
                 value: nil,
                 valueIndex: nil,
-                deliveredAt: notification.actualDeliveryDate,
+                deliveredAt: deliveryDate,
                 activatedAt: Date()
             )
 
-        case .replied:
+        case kReplyActionIdentifier:
+            let userText = (response as? UNTextInputNotificationResponse)?.userText
             event = ActivationEvent(
                 type: .replied,
-                value: notification.response?.string,
+                value: userText,
                 valueIndex: nil,
-                deliveredAt: notification.actualDeliveryDate,
+                deliveredAt: deliveryDate,
                 activatedAt: Date()
             )
 
-        case .none:
-            fallthrough
-        @unknown default:
-            event = ActivationEvent(
-                type: .none,
-                value: nil,
-                valueIndex: nil,
-                deliveredAt: notification.actualDeliveryDate,
-                activatedAt: Date()
-            )
+        default:
+            // Action buttons: ACTION_0, ACTION_1, ...
+            if response.actionIdentifier.hasPrefix("ACTION_"),
+               let indexStr = response.actionIdentifier.split(separator: "_").last,
+               let index = Int(indexStr) {
+                let actions = currentConfig?.actions ?? []
+                let actionTitle = index < actions.count ? actions[index] : response.actionIdentifier
+                event = ActivationEvent(
+                    type: .actionClicked,
+                    value: actionTitle,
+                    valueIndex: index,
+                    deliveredAt: deliveryDate,
+                    activatedAt: Date()
+                )
+            } else {
+                event = ActivationEvent(
+                    type: .none,
+                    value: nil,
+                    valueIndex: nil,
+                    deliveredAt: deliveryDate,
+                    activatedAt: Date()
+                )
+            }
         }
 
-        center.removeDeliveredNotification(notification)
-        if let current = currentNotification {
-            center.removeDeliveredNotification(current)
-        }
+        center.removeDeliveredNotifications(withIdentifiers: [response.notification.request.identifier])
+        completionHandler()
         outputAndExit(event: event)
     }
 
     // MARK: - Private
+
+    private func registerCategory(for config: NotificationConfig) -> String {
+        var actions: [UNNotificationAction] = []
+
+        if let replyPlaceholder = config.replyPlaceholder {
+            // Reply action
+            let replyAction = UNTextInputNotificationAction(
+                identifier: kReplyActionIdentifier,
+                title: "Reply",
+                options: [],
+                textInputButtonTitle: "Send",
+                textInputPlaceholder: replyPlaceholder
+            )
+            actions.append(replyAction)
+        } else if let actionTitles = config.actions, !actionTitles.isEmpty {
+            // Button actions (max kMaxActions)
+            let limit = min(actionTitles.count, kMaxActions)
+            for i in 0..<limit {
+                let action = UNNotificationAction(
+                    identifier: "ACTION_\(i)",
+                    title: actionTitles[i],
+                    options: [.foreground]
+                )
+                actions.append(action)
+            }
+        }
+
+        let category = UNNotificationCategory(
+            identifier: kCategoryIdentifier,
+            actions: actions,
+            intentIdentifiers: [],
+            options: [.customDismissAction]
+        )
+
+        UNUserNotificationCenter.current().setNotificationCategories([category])
+        return kCategoryIdentifier
+    }
+
+    private func createAttachment(from path: String) -> UNNotificationAttachment? {
+        let url: URL
+        if let parsed = URL(string: path), let scheme = parsed.scheme, !scheme.isEmpty, scheme != "file" {
+            // Remote URL — download to temp file
+            guard let data = try? Data(contentsOf: parsed) else { return nil }
+            let ext = parsed.pathExtension.isEmpty ? "png" : parsed.pathExtension
+            let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString + "." + ext)
+            do {
+                try data.write(to: tempURL)
+                return try UNNotificationAttachment(identifier: UUID().uuidString, url: tempURL, options: nil)
+            } catch {
+                return nil
+            }
+        } else {
+            url = URL(fileURLWithPath: path)
+            // Copy to temp to avoid file access issues
+            let ext = url.pathExtension.isEmpty ? "png" : url.pathExtension
+            let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString + "." + ext)
+            do {
+                try FileManager.default.copyItem(at: url, to: tempURL)
+                return try UNNotificationAttachment(identifier: UUID().uuidString, url: tempURL, options: nil)
+            } catch {
+                return nil
+            }
+        }
+    }
 
     private func outputAndExit(event: ActivationEvent) {
         let output = OutputFormatter.format(event: event, asJSON: currentConfig?.outputJSON ?? false)
@@ -273,13 +398,7 @@ class NotificationManager: NSObject, NSUserNotificationCenterDelegate {
         exit(0)
     }
 
-    private func loadImage(from path: String) -> NSImage? {
-        let url: URL
-        if let parsed = URL(string: path), parsed.scheme != nil, !parsed.scheme!.isEmpty {
-            url = parsed
-        } else {
-            url = URL(fileURLWithPath: path)
-        }
-        return NSImage(contentsOf: url)
+    func printStderr(_ message: String) {
+        FileHandle.standardError.write(Data("[!] \(message)\n".utf8))
     }
 }
