@@ -17,7 +17,7 @@ func generateAppIcon(resourcesDir: String) {
 
     for (name, px) in entries {
         let size = NSSize(width: px, height: px)
-        let pointSize = CGFloat(px) * 0.65
+        let pointSize = CGFloat(px) * 0.85
         let config = NSImage.SymbolConfiguration(pointSize: pointSize, weight: .regular)
         guard let configured = symbolImage.withSymbolConfiguration(config) else { continue }
 
