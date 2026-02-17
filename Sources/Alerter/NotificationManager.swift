@@ -23,6 +23,7 @@ class NotificationManager: NSObject, NSUserNotificationCenterDelegate {
 
     private var currentNotification: NSUserNotification?
     private var currentConfig: NotificationConfig?
+    private var hasExited = false
 
     // MARK: - Deliver
 
@@ -118,8 +119,8 @@ class NotificationManager: NSObject, NSUserNotificationCenterDelegate {
             let deliveredGroupID = notification.userInfo?["groupID"] as? String
             if groupID == "ALL" || deliveredGroupID == groupID {
                 var entry: [String: String] = [:]
-                entry["GroupID"] = deliveredGroupID
-                entry["Title"] = notification.title
+                entry["groupID"] = deliveredGroupID
+                entry["title"] = notification.title
                 entry["subtitle"] = notification.subtitle
                 entry["message"] = notification.informativeText
                 entry["deliveredAt"] = notification.actualDeliveryDate?.description
@@ -156,8 +157,11 @@ class NotificationManager: NSObject, NSUserNotificationCenterDelegate {
     func userNotificationCenter(_ center: NSUserNotificationCenter,
                                 didDeliver notification: NSUserNotification) {
         currentNotification = notification
+        startDismissalPolling(for: notification)
+        startTimeoutIfNeeded(for: notification, center: center)
+    }
 
-        // Poll for notification dismissal (closed by user)
+    private func startDismissalPolling(for notification: NSUserNotification) {
         let uuid = currentConfig?.uuid ?? ""
         DispatchQueue.global().async { [weak self] in
             while true {
@@ -183,20 +187,20 @@ class NotificationManager: NSObject, NSUserNotificationCenterDelegate {
                 Thread.sleep(forTimeInterval: 0.2)
             }
         }
+    }
 
-        // Timeout handler
-        if let config = currentConfig, config.timeout > 0 {
-            DispatchQueue.global().asyncAfter(deadline: .now() + .seconds(config.timeout)) { [weak self] in
-                center.removeDeliveredNotification(notification)
-                let event = ActivationEvent(
-                    type: .timeout,
-                    value: nil,
-                    valueIndex: nil,
-                    deliveredAt: notification.actualDeliveryDate,
-                    activatedAt: Date()
-                )
-                self?.outputAndExit(event: event)
-            }
+    private func startTimeoutIfNeeded(for notification: NSUserNotification, center: NSUserNotificationCenter) {
+        guard let config = currentConfig, config.timeout > 0 else { return }
+        DispatchQueue.main.asyncAfter(deadline: .now() + .seconds(config.timeout)) { [weak self] in
+            center.removeDeliveredNotification(notification)
+            let event = ActivationEvent(
+                type: .timeout,
+                value: nil,
+                valueIndex: nil,
+                deliveredAt: notification.actualDeliveryDate,
+                activatedAt: Date()
+            )
+            self?.outputAndExit(event: event)
         }
     }
 
@@ -204,60 +208,7 @@ class NotificationManager: NSObject, NSUserNotificationCenterDelegate {
                                 didActivate notification: NSUserNotification) {
         guard notification.userInfo?["uuid"] as? String == currentConfig?.uuid else { return }
 
-        let event: ActivationEvent
-
-        switch notification.activationType {
-        case .additionalActionClicked, .actionButtonClicked:
-            let alternateTitles = (notification as NSObject).value(forKey: "_alternateActionButtonTitles") as? [String]
-            if let titles = alternateTitles, titles.count > 1 {
-                let index = ((notification as NSObject).value(forKey: "_alternateActionIndex") as? NSNumber)?.intValue ?? 0
-                event = ActivationEvent(
-                    type: .actionClicked,
-                    value: titles[index],
-                    valueIndex: index,
-                    deliveredAt: notification.actualDeliveryDate,
-                    activatedAt: Date()
-                )
-            } else {
-                event = ActivationEvent(
-                    type: .actionClicked,
-                    value: notification.actionButtonTitle,
-                    valueIndex: nil,
-                    deliveredAt: notification.actualDeliveryDate,
-                    activatedAt: Date()
-                )
-            }
-
-        case .contentsClicked:
-            event = ActivationEvent(
-                type: .contentsClicked,
-                value: nil,
-                valueIndex: nil,
-                deliveredAt: notification.actualDeliveryDate,
-                activatedAt: Date()
-            )
-
-        case .replied:
-            event = ActivationEvent(
-                type: .replied,
-                value: notification.response?.string,
-                valueIndex: nil,
-                deliveredAt: notification.actualDeliveryDate,
-                activatedAt: Date()
-            )
-
-        case .none:
-            fallthrough
-        @unknown default:
-            event = ActivationEvent(
-                type: .none,
-                value: nil,
-                valueIndex: nil,
-                deliveredAt: notification.actualDeliveryDate,
-                activatedAt: Date()
-            )
-        }
-
+        let event = activationEvent(for: notification)
         center.removeDeliveredNotification(notification)
         if let current = currentNotification {
             center.removeDeliveredNotification(current)
@@ -265,9 +216,47 @@ class NotificationManager: NSObject, NSUserNotificationCenterDelegate {
         outputAndExit(event: event)
     }
 
+    private func activationEvent(for notification: NSUserNotification) -> ActivationEvent {
+        let deliveredAt = notification.actualDeliveryDate
+        let activatedAt = Date()
+
+        switch notification.activationType {
+        case .additionalActionClicked, .actionButtonClicked:
+            return actionClickedEvent(notification: notification, deliveredAt: deliveredAt, activatedAt: activatedAt)
+
+        case .contentsClicked:
+            return ActivationEvent(type: .contentsClicked, value: nil, valueIndex: nil,
+                                   deliveredAt: deliveredAt, activatedAt: activatedAt)
+
+        case .replied:
+            return ActivationEvent(type: .replied, value: notification.response?.string, valueIndex: nil,
+                                   deliveredAt: deliveredAt, activatedAt: activatedAt)
+
+        case .none:
+            fallthrough
+        @unknown default:
+            return ActivationEvent(type: .none, value: nil, valueIndex: nil,
+                                   deliveredAt: deliveredAt, activatedAt: activatedAt)
+        }
+    }
+
+    private func actionClickedEvent(notification: NSUserNotification,
+                                    deliveredAt: Date?, activatedAt: Date) -> ActivationEvent {
+        let alternateTitles = (notification as NSObject).value(forKey: "_alternateActionButtonTitles") as? [String]
+        if let titles = alternateTitles, titles.count > 1 {
+            let index = ((notification as NSObject).value(forKey: "_alternateActionIndex") as? NSNumber)?.intValue ?? 0
+            return ActivationEvent(type: .actionClicked, value: titles[index], valueIndex: index,
+                                   deliveredAt: deliveredAt, activatedAt: activatedAt)
+        }
+        return ActivationEvent(type: .actionClicked, value: notification.actionButtonTitle, valueIndex: nil,
+                               deliveredAt: deliveredAt, activatedAt: activatedAt)
+    }
+
     // MARK: - Private
 
     private func outputAndExit(event: ActivationEvent) {
+        guard !hasExited else { return }
+        hasExited = true
         let output = OutputFormatter.format(event: event, asJSON: currentConfig?.outputJSON ?? false)
         print(output, terminator: "")
         exit(0)

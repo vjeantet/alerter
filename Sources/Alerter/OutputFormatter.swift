@@ -25,11 +25,7 @@ struct OutputFormatter {
     }()
 
     static func format(event: ActivationEvent, asJSON: Bool) -> String {
-        if asJSON {
-            return formatJSON(event: event)
-        } else {
-            return formatText(event: event)
-        }
+        asJSON ? formatJSON(event: event) : formatText(event: event)
     }
 
     private static func formatText(event: ActivationEvent) -> String {
@@ -53,22 +49,30 @@ struct OutputFormatter {
         }
     }
 
+    private struct JSONOutput: Encodable {
+        let activationType: String
+        let activationAt: String
+        var activationValue: String?
+        var activationValueIndex: String?
+        var deliveredAt: String?
+    }
+
     private static func formatJSON(event: ActivationEvent) -> String {
-        var dict: [String: Any] = [
-            "activationType": event.type.rawValue,
-            "activationAt": dateFormatter.string(from: event.activatedAt),
-        ]
-        if let value = event.value {
-            dict["activationValue"] = value
-        }
+        var output = JSONOutput(
+            activationType: event.type.rawValue,
+            activationAt: dateFormatter.string(from: event.activatedAt)
+        )
+        output.activationValue = event.value
         if let index = event.valueIndex {
-            dict["activationValueIndex"] = "\(index)"
+            output.activationValueIndex = "\(index)"
         }
         if let delivered = event.deliveredAt {
-            dict["deliveredAt"] = dateFormatter.string(from: delivered)
+            output.deliveredAt = dateFormatter.string(from: delivered)
         }
 
-        guard let data = try? JSONSerialization.data(withJSONObject: dict, options: .prettyPrinted),
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        guard let data = try? encoder.encode(output),
               let jsonString = String(data: data, encoding: .utf8) else {
             return "{}"
         }

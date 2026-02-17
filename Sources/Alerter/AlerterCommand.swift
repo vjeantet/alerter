@@ -126,15 +126,7 @@ struct AlerterCommand: ParsableCommand {
             }
         }
 
-        // Wait until target time or delay
-        if let atValue = at, let targetDate = parseAtTime(atValue) {
-            let waitInterval = targetDate.timeIntervalSinceNow
-            if waitInterval > 0 {
-                Thread.sleep(forTimeInterval: waitInterval)
-            }
-        } else if delay > 0 {
-            Thread.sleep(forTimeInterval: Double(delay))
-        }
+        waitForScheduledTime()
 
         // Deliver notification
         if let message = message {
@@ -153,7 +145,7 @@ struct AlerterCommand: ParsableCommand {
                 timeout: timeout,
                 outputJSON: json,
                 ignoreDnD: ignoreDnd,
-                uuid: "\(NSApplication.shared.hash)"
+                uuid: UUID().uuidString
             )
 
             let manager = NotificationManager.shared
@@ -161,6 +153,17 @@ struct AlerterCommand: ParsableCommand {
 
             // Start the run loop to receive notification callbacks
             NSApplication.shared.run()
+        }
+    }
+
+    private func waitForScheduledTime() {
+        if let atValue = at, let targetDate = parseAtTime(atValue) {
+            let waitInterval = targetDate.timeIntervalSinceNow
+            if waitInterval > 0 {
+                Thread.sleep(forTimeInterval: waitInterval)
+            }
+        } else if delay > 0 {
+            Thread.sleep(forTimeInterval: Double(delay))
         }
     }
 
@@ -200,7 +203,4 @@ struct AlerterCommand: ParsableCommand {
         return nil
     }
 
-    private func printError(_ message: String) {
-        FileHandle.standardError.write(Data("[!] \(message)\n".utf8))
-    }
 }
