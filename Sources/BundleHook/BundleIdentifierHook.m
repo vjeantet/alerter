@@ -7,7 +7,7 @@ static NSString *_fakeBundleIdentifier = nil;
 
 - (NSString *)__bundleIdentifier {
     if (self == [NSBundle mainBundle]) {
-        return _fakeBundleIdentifier ?: @"fr.vjeantet.alerter";
+        return _fakeBundleIdentifier ?: @"com.apple.Terminal";
     } else {
         return [self __bundleIdentifier];
     }

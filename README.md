@@ -240,7 +240,7 @@ Output is a JSON array of notifications.
 `--sender ID`
 
 Makes the notification appear as if it was sent by the specified application,
-including using its icon. Defaults to `fr.vjeantet.alerter`.
+including using its icon. Defaults to `com.apple.Terminal`.
 
 When this option is used, clicking the notification will launch the impersonated
 application instead of alerter.
