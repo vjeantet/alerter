@@ -1,7 +1,5 @@
 # Alerter 26.2 — The Swift Era, Refined
 
-## English
-
 **Alerter has been completely rebuilt from the ground up.**
 
 Starting with version 26.0, Alerter continues to mature after its landmark rewrite in Swift. The entire codebase has been modernized, delivering a cleaner, faster, and more reliable notification experience on macOS. Whether you're building automation scripts, integrating notifications into CI/CD pipelines, or just need a quick way to send alerts from the terminal, Alerter 26.2 is ready.
