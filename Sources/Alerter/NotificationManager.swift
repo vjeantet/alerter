@@ -39,6 +39,7 @@ class NotificationManager: NSObject, NSUserNotificationCenterDelegate {
         notification.title = config.title
         notification.subtitle = config.subtitle
         notification.informativeText = config.message
+        notification.identifier = config.uuid
 
         // Store config info in userInfo for callbacks
         var userInfo: [String: String] = ["uuid": config.uuid, "timeout": "\(config.timeout)"]
