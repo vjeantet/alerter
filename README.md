@@ -90,14 +90,14 @@ $ echo 'Piped Message Data!' | alerter --sound default
 
 Multiple actions and custom dropdown list
 ```
-./alerter --message "Deploy now on UAT ?" --actions "Now,Later today,Tomorrow" --dropdownLabel "When ?"
+./alerter --message "Deploy now on UAT ?" --actions "Now,Later today,Tomorrow" --dropdown-label "When ?"
 ```
 
 ![Multiple actions and custom dropdown list](/img2.png?raw=true "")
 
 Yes or No?
 ```
-./alerter --title ProjectX --subtitle "new tag detected" --message "Deploy now on UAT ?" --closeLabel No --actions Yes --appIcon http://vjeantet.fr/images/logo.png
+./alerter --title ProjectX --subtitle "new tag detected" --message "Deploy now on UAT ?" --close-label No --actions Yes --app-icon http://vjeantet.fr/images/logo.png
 ```
 
 ![Yes or No](/img3.png?raw=true "")
@@ -134,19 +134,19 @@ Displays the notification as a reply-type alert. TEXT is used as placeholder tex
 
 The available notification actions.
 When more than one value is provided, a dropdown is displayed.
-You can customize the dropdown label with the `--dropdownLabel` option.
+You can customize the dropdown label with the `--dropdown-label` option.
 Cannot be combined with `--reply`.
 
 -------------------------------------------------------------------------------
 
-`--dropdownLabel VALUE`
+`--dropdown-label VALUE`
 
 The label for the actions dropdown (only used when multiple `--actions` values are provided).
 Cannot be combined with `--reply`.
 
 -------------------------------------------------------------------------------
 
-`--closeLabel VALUE`
+`--close-label VALUE`
 
 A custom label for the notification's "Close" button.
 
@@ -247,7 +247,7 @@ application instead of alerter.
 
 -------------------------------------------------------------------------------
 
-`--appIcon PATH`
+`--app-icon PATH`
 
 The path or URL of an image to display instead of the application icon.
 
@@ -255,7 +255,7 @@ The path or URL of an image to display instead of the application icon.
 
 -------------------------------------------------------------------------------
 
-`--contentImage PATH`
+`--content-image PATH`
 
 The path or URL of an image to display inside the notification.
 
@@ -263,7 +263,7 @@ The path or URL of an image to display inside the notification.
 
 -------------------------------------------------------------------------------
 
-`--ignoreDnd`
+`--ignore-dnd`
 
 Sends the notification even if Do Not Disturb is enabled.
 
@@ -274,7 +274,7 @@ Sends the notification even if Do Not Disturb is enabled.
 
 ## Shell script example
 ```bash
-ANSWER="$(./alerter --message 'Start now ?' --closeLabel No --actions 'YES,MAYBE,one more action' --timeout 10)"
+ANSWER="$(./alerter --message 'Start now ?' --close-label No --actions 'YES,MAYBE,one more action' --timeout 10)"
 case $ANSWER in
     "@TIMEOUT") echo "Timeout man, sorry" ;;
     "@CLOSED") echo "You clicked on the default alert' close button" ;;
