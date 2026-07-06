@@ -90,21 +90,21 @@ $ echo 'Piped Message Data!' | alerter --sound default
 
 Multiple actions and custom dropdown list
 ```
-./alerter --message "Deploy now on UAT ?" --actions "Now,Later today,Tomorrow" --dropdownLabel "When ?"
+alerter --message "Deploy now on UAT ?" --actions "Now,Later today,Tomorrow" --dropdown-label "When ?"
 ```
 
 ![Multiple actions and custom dropdown list](/img2.png?raw=true "")
 
 Yes or No?
 ```
-./alerter --title ProjectX --subtitle "new tag detected" --message "Deploy now on UAT ?" --closeLabel No --actions Yes --appIcon http://vjeantet.fr/images/logo.png
+alerter --title ProjectX --subtitle "new tag detected" --message "Deploy now on UAT ?" --close-label No --actions Yes --app-icon http://vjeantet.fr/images/logo.png
 ```
 
 ![Yes or No](/img3.png?raw=true "")
 
 What is the name of this release?
 ```
-./alerter --reply "Type release name" --message "What is the name of this release?" --title "Deploy in progress..."
+alerter --reply "Type release name" --message "What is the name of this release?" --title "Deploy in progress..."
 ```
 
 ![What is the name of this release](/img4.png?raw=true "")
