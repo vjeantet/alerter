@@ -24,6 +24,8 @@ class NotificationManager: NSObject, NSUserNotificationCenterDelegate {
     private var currentNotification: NSUserNotification?
     private var currentConfig: NotificationConfig?
     private var hasExited = false
+    private var pollingCancelled = false
+    private let exitLock = NSLock()
 
     // MARK: - Deliver
 
@@ -164,14 +166,26 @@ class NotificationManager: NSObject, NSUserNotificationCenterDelegate {
 
     private func startDismissalPolling(for notification: NSUserNotification) {
         let uuid = currentConfig?.uuid ?? ""
+        pollingCancelled = false
         DispatchQueue.global().async { [weak self] in
             while true {
+                // Check if polling has been cancelled (timeout or user activation already handled it)
+                guard let self = self, !self.pollingCancelled else { return }
+
+                // Wrap in autoreleasepool: deliveredNotifications returns a new NSArray copy
+                // with NSUserNotification copies each call. Without draining, these ObjC
+                // temporary objects accumulate on the background thread (~5 times/sec),
+                // causing continuous memory growth.
                 var stillPresent = false
-                for n in NSUserNotificationCenter.default.deliveredNotifications {
-                    if n.userInfo?["uuid"] as? String == uuid {
-                        stillPresent = true
+                autoreleasepool {
+                    for n in NSUserNotificationCenter.default.deliveredNotifications {
+                        if n.userInfo?["uuid"] as? String == uuid {
+                            stillPresent = true
+                            break
+                        }
                     }
                 }
+
                 if !stillPresent {
                     DispatchQueue.main.async {
                         let event = ActivationEvent(
@@ -181,7 +195,7 @@ class NotificationManager: NSObject, NSUserNotificationCenterDelegate {
                             deliveredAt: notification.actualDeliveryDate,
                             activatedAt: Date()
                         )
-                        self?.outputAndExit(event: event)
+                        self.outputAndExit(event: event)
                     }
                     return
                 }
@@ -256,8 +270,15 @@ class NotificationManager: NSObject, NSUserNotificationCenterDelegate {
     // MARK: - Private
 
     private func outputAndExit(event: ActivationEvent) {
-        guard !hasExited else { return }
+        exitLock.lock()
+        guard !hasExited else {
+            exitLock.unlock()
+            return
+        }
         hasExited = true
+        pollingCancelled = true
+        exitLock.unlock()
+
         let output = OutputFormatter.format(event: event, asJSON: currentConfig?.outputJSON ?? false)
         print(output, terminator: "")
         exit(0)
