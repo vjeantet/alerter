@@ -15,6 +15,7 @@ struct NotificationConfig {
     let timeout: Int
     let outputJSON: Bool
     let ignoreDnD: Bool
+    let exitOnDelivery: Bool
     let uuid: String
 }
 
@@ -97,6 +98,25 @@ class NotificationManager: NSObject, NSUserNotificationCenterDelegate {
         let center = NSUserNotificationCenter.default
         center.delegate = self
         center.deliver(notification)
+
+        // Both lifetime bounds are armed here rather than from didDeliver, so a
+        // delivery that is never confirmed cannot leave the process running forever.
+        if config.exitOnDelivery {
+            startDeliveryFailsafe()
+        } else {
+            startTimeoutIfNeeded(for: notification, center: center)
+        }
+    }
+
+    /// Bounds the lifetime of a fire-and-forget process. If delivery is never
+    /// confirmed we would otherwise wait forever for a callback that is not coming.
+    /// Exiting does not remove the notification, so a slow delivery still reaches
+    /// the user.
+    private func startDeliveryFailsafe() {
+        DispatchQueue.main.asyncAfter(deadline: .now() + .seconds(5)) {
+            FileHandle.standardError.write(Data("alerter: delivery was not confirmed\n".utf8))
+            exit(1)
+        }
     }
 
     // MARK: - Remove
@@ -158,8 +178,14 @@ class NotificationManager: NSObject, NSUserNotificationCenterDelegate {
     func userNotificationCenter(_ center: NSUserNotificationCenter,
                                 didDeliver notification: NSUserNotification) {
         currentNotification = notification
+
+        // Fire-and-forget: the notification is out and nothing is reading our output,
+        // so exit and leave it in Notification Center until the user dismisses it.
+        if currentConfig?.exitOnDelivery == true {
+            exit(0)
+        }
+
         startDismissalPolling(for: notification)
-        startTimeoutIfNeeded(for: notification, center: center)
     }
 
     private func startDismissalPolling(for notification: NSUserNotification) {
