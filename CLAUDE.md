@@ -26,6 +26,7 @@ swift run alerter --message "Test message"
 .build/debug/alerter --list ALL
 .build/debug/alerter --remove mygroup
 .build/debug/alerter --message "Timeout" --timeout 3
+.build/debug/alerter --message "Fire and forget" --timeout 10 --non-blocking
 .build/debug/alerter --help
 echo "Piped" | .build/debug/alerter
 
@@ -38,11 +39,14 @@ There are no automated tests. Testing is done manually by invoking the built bin
 Two SPM targets:
 
 - **`BundleHook`** (Objective-C) — Bundle ID swizzling via `method_exchangeImplementations`. Must stay in ObjC as Swift cannot use the ObjC runtime directly. Exposes `InstallFakeBundleIdentifierHook()` to Swift.
-- **`alerter`** (Swift) — Main executable with 4 source files:
+- **`alerter`** (Swift) — Main executable with 5 source files:
   - **`main.swift`** — Entry point. Signal handlers (SIGTERM/SIGINT), launches `AlerterCommand`.
   - **`AlerterCommand.swift`** — CLI argument parsing via Swift ArgumentParser (`ParsableCommand`). Orchestrates list/remove/deliver flow, then starts `NSApplication.run()` for notification callbacks.
   - **`NotificationManager.swift`** — Singleton handling notification lifecycle: delivery, removal, listing, delegate callbacks, polling for dismissal, timeout. Contains `NotificationConfig` struct.
   - **`OutputFormatter.swift`** — Formats activation events as plain text (`@CLOSED`, `@TIMEOUT`, `@CONTENTCLICKED`) or JSON.
+  - **`BackgroundLauncher.swift`** — Backs `--non-blocking`. Re-executes the binary via `posix_spawn` with stdio on `/dev/null` and `POSIX_SPAWN_SETSID`, so the parent can exit immediately.
+
+**`--non-blocking`:** the parent re-execs itself detached and exits. The child is handed the same options rebuilt from parsed values (so a piped-stdin message survives) plus one of two lifetime modes: `--timeout N` if the caller asked for one, otherwise the hidden `--exit-on-delivery`, which exits as soon as `didDeliver` fires and leaves the notification up. `--exit-on-delivery` also arms a 5-second failsafe so a delivery that is never confirmed cannot leave an immortal process behind.
 
 **Execution flow:** Parse CLI args (ArgumentParser) → validate → deliver notification via NSUserNotificationCenter → `NSApp.run()` → delegate callbacks capture interaction → format output to stdout → `exit(0)`.
 

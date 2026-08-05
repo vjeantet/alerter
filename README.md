@@ -271,6 +271,33 @@ Sends the notification even if Do Not Disturb is enabled.
 
 -------------------------------------------------------------------------------
 
+`--non-blocking`
+
+Delivers the notification from a detached background process and returns
+immediately, instead of waiting for the user to interact with it. Equivalent to
+running `alerter ... >/dev/null 2>&1 &`, with the addition that the background
+process gets its own session, so it survives the terminal that launched it
+closing.
+
+Any user interaction with the notification is discarded, so use this for
+fire-and-forget notifications only.
+
+By default the background process exits as soon as the notification has been
+delivered, leaving it in Notification Center until you dismiss it:
+
+```bash
+alerter --title "Build Bot" --message "Build finished" --non-blocking
+```
+
+Adding `--timeout` keeps the background process alive for that long so it can
+withdraw the notification, exactly as it does in the foreground:
+
+```bash
+alerter --title "Build Bot" --message "Build finished" --timeout 30 --non-blocking
+```
+
+-------------------------------------------------------------------------------
+
 
 ## Shell script example
 ```bash

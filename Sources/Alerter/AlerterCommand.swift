@@ -74,6 +74,15 @@ struct AlerterCommand: ParsableCommand {
     @Flag(help: "Send notification even if Do Not Disturb is enabled.")
     var ignoreDnd: Bool = false
 
+    @Flag(help: "Deliver in a detached background process and return immediately, discarding output.")
+    var nonBlocking: Bool = false
+
+    /// Set by `--non-blocking` on the child it spawns. Exits as soon as the
+    /// notification is delivered instead of waiting for an interaction nobody
+    /// is listening for.
+    @Flag(help: .hidden)
+    var exitOnDelivery: Bool = false
+
     // MARK: - Run
 
     mutating func validate() throws {
@@ -115,6 +124,12 @@ struct AlerterCommand: ParsableCommand {
             throw ExitCode.success
         }
 
+        // Hand the whole job to a detached child and return immediately
+        if nonBlocking && message != nil {
+            try BackgroundLauncher.relaunchDetached(arguments: childArguments())
+            throw ExitCode.success
+        }
+
         // Install fake bundle identifier
         _ = InstallFakeBundleIdentifierHook(sender)
 
@@ -145,6 +160,7 @@ struct AlerterCommand: ParsableCommand {
                 timeout: timeout,
                 outputJSON: json,
                 ignoreDnD: ignoreDnd,
+                exitOnDelivery: exitOnDelivery,
                 uuid: UUID().uuidString
             )
 
@@ -154,6 +170,42 @@ struct AlerterCommand: ParsableCommand {
             // Start the run loop to receive notification callbacks
             NSApplication.shared.run()
         }
+    }
+
+    /// Rebuilds the command line from the parsed values, so a message piped in on
+    /// stdin (already consumed here) still reaches the child, and `--non-blocking`
+    /// is dropped so the child does not respawn itself.
+    private func childArguments() -> [String] {
+        var args: [String] = []
+        func add(_ name: String, _ value: String?) {
+            if let value { args += [name, value] }
+        }
+        add("--message", message)
+        add("--remove", remove)
+        add("--title", title)
+        add("--subtitle", subtitle)
+        add("--close-label", closeLabel)
+        add("--reply", reply)
+        add("--actions", actions)
+        add("--dropdown-label", dropdownLabel)
+        add("--sound", sound)
+        add("--group", group)
+        add("--sender", sender)
+        add("--app-icon", appIcon)
+        add("--content-image", contentImage)
+        add("--at", at)
+        // An explicit --timeout means the caller wants the notification withdrawn
+        // after N seconds, so the child has to stay alive that long. Otherwise it
+        // exits as soon as the notification is out, leaving it up until dismissed.
+        if timeout > 0 {
+            args += ["--timeout", "\(timeout)"]
+        } else {
+            args.append("--exit-on-delivery")
+        }
+        if delay > 0 { args += ["--delay", "\(delay)"] }
+        if json { args.append("--json") }
+        if ignoreDnd { args.append("--ignore-dnd") }
+        return args
     }
 
     private func waitForScheduledTime() {
