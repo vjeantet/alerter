@@ -167,9 +167,11 @@ class NotificationManager: NSObject, NSUserNotificationCenterDelegate {
         DispatchQueue.global().async { [weak self] in
             while true {
                 var stillPresent = false
-                for n in NSUserNotificationCenter.default.deliveredNotifications {
-                    if n.userInfo?["uuid"] as? String == uuid {
-                        stillPresent = true
+                autoreleasepool {
+                    for n in NSUserNotificationCenter.default.deliveredNotifications {
+                        if n.userInfo?["uuid"] as? String == uuid {
+                            stillPresent = true
+                        }
                     }
                 }
                 if !stillPresent {
