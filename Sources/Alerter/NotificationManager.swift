@@ -157,6 +157,10 @@ class NotificationManager: NSObject, NSUserNotificationCenterDelegate {
 
     func userNotificationCenter(_ center: NSUserNotificationCenter,
                                 didDeliver notification: NSUserNotification) {
+        // Every alerter process shares one bundle identity, so this fires in all of
+        // them for every delivery. Only adopt our own notification, or a click on
+        // ours would also remove whichever notification was delivered last.
+        guard notification.userInfo?["uuid"] as? String == currentConfig?.uuid else { return }
         currentNotification = notification
         startDismissalPolling(for: notification)
         startTimeoutIfNeeded(for: notification, center: center)
